@@ -139,3 +139,4 @@ When entering the world for the first time as operator (with cheats enabled):
   ```mcfunction
   /function <namespace>/init_world
   ```
+

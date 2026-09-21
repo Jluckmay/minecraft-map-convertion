@@ -47,3 +47,4 @@ Prior to converting any Java world to Bedrock, the tool executes an in-depth aud
    - Census extraction of all entities (`Entities`), command blocks (`TileEntities` with ID `minecraft:command_block`), and item frames (`ItemFrame`).
 4. **Datapacks & Functions (`datapacks/*/data/*/functions/`)**:
    - Detection of custom NPC summon commands and embedded trade recipes.
+

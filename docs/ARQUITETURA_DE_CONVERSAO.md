@@ -106,3 +106,4 @@ Converts datapack mob loot tables from Java JSON to Bedrock JSON:
 - Translates Java `/tellraw` JSON objects into Bedrock `rawtext` syntax with embedded section color codes (`§a`, `§6`, etc.).
 - Translates Java sound events to Bedrock sound identifiers (`playsound`).
 - Adapts `/forceload` chunk loading into simulation areas (`tickingarea`).
+

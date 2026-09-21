@@ -81,3 +81,4 @@ This guide documents how the `map_converter.py` engine translates Java Edition c
 
 #### 1.4. `/forceload` $\rightarrow$ `/tickingarea`
 - Java `/forceload` lines are documented as informative comments in functions and replaced by persistent simulation areas using `/tickingarea` during world initialization.
+

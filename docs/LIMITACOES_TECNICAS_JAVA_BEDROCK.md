@@ -41,3 +41,4 @@ When converting worlds and datapacks from **Minecraft Java Edition** to **Minecr
 | **Spectral Arrow (`spectral_arrow`)** | Tipped arrows / regular high-damage arrows | Transparent fallback in NPC trade tables | Spectral arrows with glowing outlines are exclusive to Java Edition. |
 | **Open books in item frames** | Regular item frame displaying written book item | Documented in reports and manuals | Bedrock item frames do not render open formatted multi-page book text on block faces. |
 | **Playerdata and Inventories** | Spawn lobby initialization or starter kits | Players spawn at world spawn; kits provided via functions | Bedrock manages player state via Microsoft Account XUIDs rather than Java UUID `.dat` files. |
+
