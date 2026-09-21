@@ -9,13 +9,13 @@
 ---
 
 *Read in / Leia em:*
-- [English (#english)](#english)
-- [Português (#português)](#português)
+- [English (EN)](#english)
+- [Português (PT-BR)](#português)
 
 ---
 
 <a name="english"></a>
-## English
+## English (EN)
 
 ### Overview
 **Minecraft Map Converter & Bridge Tool** is an automated, robust conversion pipeline designed to bridge the fundamental gaps between Minecraft Java Edition and Minecraft Bedrock Edition (specifically tailored for **Bedrock 1.26.40+**).
@@ -79,10 +79,18 @@ python tests/test_conversion.py
 - `--packs`: Output directory for unpacked Behavior and Resource Packs [Default: `packs`].
 - `--keep-temp`: Preserves intermediate temporary world extraction directory (`dist/work_bedrock`).
 
+### Technical Documentation & Reports
+All in-depth audit reports, conversion documentation, and manuals are available in bilingual format (PT-BR / EN) inside the [`docs/`](docs/) directory:
+- 📱 [**Installation, Testing & Mobile (Android / iOS) Guide**](docs/INSTRUCOES_INSTALACAO_E_TESTES.md)
+- 📊 [**Java Entity Audit & Census Report (2,031 entities)**](docs/RELATORIO_AUDITORIA_ENTIDADES.md)
+- 🛠️ [**General Java $\rightarrow$ Bedrock Technical Conversion Report**](docs/RELATORIO_CONVERSAO.md)
+- ⚠️ [**Engine Limitations, Fallbacks & Loss Mapping Report**](docs/RELATORIO_PERDAS_E_LIMITACOES.md)
+- 📜 [**Adapted & Unconverted Commands Report**](docs/RELATORIO_COMANDOS_NAO_CONVERTIDOS.md)
+
 ---
 
 <a name="português"></a>
-## Português
+## Português (PT-BR)
 
 ### Visão Geral
 O **Minecraft Map Converter & Bridge Tool** é um utilitário automatizado de conversão e ponte complementar projetado para suprir as lacunas estruturais entre o Minecraft Java Edition e o Minecraft Bedrock Edition (otimizado para **Bedrock 1.26.40+**).

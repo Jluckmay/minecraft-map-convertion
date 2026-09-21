@@ -1,6 +1,15 @@
-# Instruções de Instalação, Ativação e Testes (Bedrock 1.26.40)
+# Instruções de Instalação, Ativação e Testes / Installation, Activation & Testing Instructions (Bedrock 1.26.40)
 
-## 1. Arquivos Entregues (Diretório `dist/`)
+*Read in / Leia em:*
+- [Português (PT-BR)](#português-pt-br)
+- [English (EN)](#english-en)
+
+---
+
+<a name="português-pt-br"></a>
+## Português (PT-BR)
+
+### 1. Arquivos Entregues (Diretório `dist/`)
 1. **`dist/mazescapist-bedrock-1.26.40.mcworld`**: Mundo completo pronto para uso no Minecraft Bedrock 1.26.40 com os pacotes já vinculados e ativados.
 2. **`dist/mazerunner-behavior-pack.mcpack`**: Behavior Pack independente (NPCs, comércio, loot de esmeraldas e funções).
 3. **`dist/mazerunner-resource-pack.mcpack`**: Resource Pack independente (texturas de blocos, definições visuais e ícone).
@@ -8,57 +17,57 @@
 
 ---
 
-## 2. Como Instalar no PC (Windows / Mac)
+### 2. Como Instalar no PC (Windows / Mac)
 
-### Opção A: Importação Direta do Mundo (Recomendada)
-1. Dê um duplo-clique no arquivo `mazescapist-bedrock-1.26.40.mcworld`.
+#### Opção A: Importação Direta do Mundo (Recomendada)
+1. Dê um duplo-clique no arquivo `dist/mazescapist-bedrock-1.26.40.mcworld`.
 2. O Minecraft Bedrock iniciará automaticamente e fará a importação do mundo.
 3. O mundo aparecerá na lista de mundos com o nome **§4§lMazescapist** e com o ícone original configurado.
 4. Os pacotes de comportamento e textura já estão associados nas configurações do mundo.
 
-### Opção B: Instalação Manual dos Pacotes
+#### Opção B: Instalação Manual dos Pacotes
 Caso deseje utilizar os pacotes em outro mundo:
-1. Dê um duplo clique em `mazerunner-resource-pack.mcpack` e aguarde a mensagem de importação concluída.
-2. Dê um duplo clique em `mazerunner-behavior-pack.mcpack` e aguarde a mensagem de importação concluída.
+1. Dê um duplo clique em `dist/mazerunner-resource-pack.mcpack` e aguarde a mensagem de importação concluída.
+2. Dê um duplo clique em `dist/mazerunner-behavior-pack.mcpack` e aguarde a mensagem de importação concluída.
 3. Nas configurações do seu mundo, ative o pacote de recursos e o pacote de comportamento.
 
 ---
 
-## 3. Como Instalar e Jogar no Celular (Android e iOS)
+### 3. Como Instalar e Jogar no Celular (Android e iOS)
 
 O arquivo `.mcworld` e os pacotes `.mcpack` são 100% compatíveis com Minecraft Bedrock 1.26.40 para dispositivos móveis (smartphones e tablets).
 
-### 3.1. No Android
+#### 3.1. No Android
 1. **Transferência do Arquivo**:
-   - Transfira o arquivo `mazescapist-bedrock-1.26.40.mcworld` para o seu celular (via cabo USB, Google Drive, Telegram, WhatsApp ou download direto).
+   - Transfira o arquivo `dist/mazescapist-bedrock-1.26.40.mcworld` para o seu celular (via cabo USB, Google Drive, Telegram, WhatsApp ou download direto).
 2. **Importação Direta**:
    - Abra o gerenciador de arquivos do seu aparelho (ex: *Arquivos*, *Files do Google* ou *ZArchiver*).
    - Localize o arquivo `mazescapist-bedrock-1.26.40.mcworld` e toque nele.
    - Selecione **"Abrir com Minecraft"** (ou escolha o Minecraft se aparecer o menu "Abrir como...").
-   - O jogo abrirá automaticamente com a notificação no topo da tela: *"Importação do mundo iniciada..."* e em seguida *"Importação do mundo concluída com sucesso"*.
+   - O jogo abrirá automaticamente com a notificação: *"Importação do mundo iniciada..."* e em seguida *"Importação do mundo concluída com sucesso"*.
 3. **Caso o gerenciador nativo não abra diretamente**:
    - Se o seu aparelho tentar abrir como arquivo compactado (ZIP), utilize o aplicativo gratuito **ZArchiver**: toque e segure no arquivo, selecione *Abrir como* > *Minecraft*.
 
-### 3.2. No iPhone / iPad (iOS)
+#### 3.2. No iPhone / iPad (iOS)
 1. **Transferência do Arquivo**:
-   - Envie o arquivo `mazescapist-bedrock-1.26.40.mcworld` via **AirDrop** do Mac/PC ou salve-o no aplicativo **Arquivos (Files)** via iCloud Drive/download no Safari.
+   - Envie o arquivo `dist/mazescapist-bedrock-1.26.40.mcworld` via **AirDrop** do Mac/PC ou salve-o no aplicativo **Arquivos (Files)** via iCloud Drive ou Safari.
 2. **Importação**:
    - Abra o app **Arquivos** e toque sobre o arquivo `mazescapist-bedrock-1.26.40.mcworld`.
    - Toque no ícone de compartilhamento (quadrado com seta para cima) e selecione o ícone do **Minecraft**.
    - O Minecraft abrirá e importará o mapa automaticamente.
 
-### 3.3. Dicas de Jogabilidade e Desempenho no Celular
-- **Distância de Renderização**: Devido à grande escala do labirinto, recomenda-se configurar a *Distância de Renderização* entre 6 e 10 pedaços (chunks) em aparelhos intermediários para obter 60 FPS estáveis.
-- **Teclado na Tela / Comandos**: Para rodar o comando de inicialização (`/function mazerunner/init_world`), toque no ícone de chat no topo da tela, clique no botão `/` (barra) e cole o comando.
-- **Controles de Toque**: O labirinto possui trechos com desafios de parkour e passagens rápidas; recomenda-se usar o layout de toque moderno com "Mira e Joystick" ou conectar um controle bluetooth (Xbox, PS4/PS5 ou genérico).
+#### 3.3. Dicas de Jogabilidade e Desempenho no Celular
+- **Distância de Renderização**: Recomenda-se configurar entre 6 e 10 pedaços (chunks) em aparelhos intermediários para obter 60 FPS estáveis.
+- **Teclado na Tela / Comandos**: Para rodar comandos (`/function mazerunner/init_world`), toque no ícone de chat no topo da tela, clique no botão `/` e cole o comando.
+- **Controles de Toque**: Recomenda-se usar o layout de toque moderno com "Mira e Joystick" ou conectar um controle bluetooth.
 
 ---
 
-## 4. Procedimento de Inicialização no Jogo
+### 4. Procedimento de Inicialização no Jogo
 Ao entrar no mundo pela primeira vez como operador (com cheats ativados):
 
 1. **Inicializar Mecanismos e Placar**:
-   Abra o chat e execute o comando:
+   Abra o chat e execute:
    ```mcfunction
    /function mazerunner/init_world
    ```
@@ -74,42 +83,143 @@ Ao entrar no mundo pela primeira vez como operador (com cheats ativados):
 
 ---
 
-## 5. Testes de Validação Recomendados
+### 5. Testes de Validação Recomendados
 
 1. **Teste de Idempotência dos NPCs**:
-   Execute no chat:
    ```mcfunction
    /scoreboard players set DAY_COUNTER dayCounter 4
    /function custom/generates_npc
    ```
    - O aldeão **Bruce** aparecerá na área de carregamento (`264, 59, -2184`) com suas trocas originais.
-   - Execute o comando `/function custom/generates_npc` uma segunda vez.
+   - Execute `/function custom/generates_npc` uma segunda vez.
    - **Resultado esperado**: Nenhum aldeão duplicado será gerado.
 
 2. **Teste de Portas do Labirinto**:
-   Execute:
    ```mcfunction
    /function custom/open_doors_1
    ```
    - A Porta 1 abrirá instantaneamente sem corrupção de blocos.
-   Execute:
    ```mcfunction
    /function custom/close_all_doors
    ```
    - Todas as portas se fecharão perfeitamente.
 
 3. **Teste de Loot de Monstros**:
-   Invoque um Zumbi ou Blaze e derrote-o:
+   - Invoque um Zumbi ou Blaze e derrote-o.
    - **Resultado esperado**: O monstro dropará esmeraldas conforme a economia do datapack.
 
 ---
 
-## 6. Hashes de Integridade (SHA-256)
+### 6. Hashes de Integridade (SHA-256)
 
-| Arquivo | Tamanho | Hash SHA-256 |
-| :--- | :--- | :--- |
-| `mazescapist-bedrock-1.26.40.mcworld` | 75.353.550 bytes | `f78d76a13c7152a725ed319eb660f52b2df65a1bb3e9090ae6007e419a68043c` |
-| `mazerunner-behavior-pack.mcpack` | 65.634 bytes | `4d47ed85fb6f54976e7ebcc0ba68bef96fd5bdca1343947b9fc061dfe7e3d3bd` |
-| `mazerunner-resource-pack.mcpack` | 20.734 bytes | `70daacd2dd958f9fa9f644f9c3dae7b361dddbb67790f17121adfec631b56197` |
-| `bedrock-version.mcworld` (Original) | 75.289.246 bytes | `28c99e1f83982fbc72b01179ef22de7a7a84e69880bcc21a76f12558606ee5f1` |
-| `java-version.zip` (Original) | 224.707.649 bytes | `16ac4e38618a47bee3771bb97dd48024ceb6c350a55fa264bdd6cd99cf42833a` |
+Consulte o arquivo [`dist/SHA256SUMS.txt`](../dist/SHA256SUMS.txt) para as assinaturas mais recentes geradas pela ferramenta de build.
+
+---
+
+<a name="english-en"></a>
+## English (EN)
+
+### 1. Delivered Files (`dist/` Directory)
+1. **`dist/mazescapist-bedrock-1.26.40.mcworld`**: Complete world ready to play on Minecraft Bedrock 1.26.40 with attached and pre-activated packs.
+2. **`dist/mazerunner-behavior-pack.mcpack`**: Standalone Behavior Pack (custom NPCs, trading tables, emerald drops, and functions).
+3. **`dist/mazerunner-resource-pack.mcpack`**: Standalone Resource Pack (block textures, client entity definitions, and icon).
+4. **`dist/SHA256SUMS.txt`**: SHA-256 cryptographic verification checksums for all packages.
+
+---
+
+### 2. How to Install on PC (Windows / Mac)
+
+#### Option A: Direct World Import (Recommended)
+1. Double-click the `dist/mazescapist-bedrock-1.26.40.mcworld` file.
+2. Minecraft Bedrock will launch automatically and import the world.
+3. The world will appear in your world list named **§4§lMazescapist** with its custom icon.
+4. Behavior and Resource packs are already activated in the world settings.
+
+#### Option B: Standalone Pack Installation
+If you want to use the packs in another world:
+1. Double-click `dist/mazerunner-resource-pack.mcpack` and wait for the import notification.
+2. Double-click `dist/mazerunner-behavior-pack.mcpack` and wait for the import notification.
+3. In your target world settings, activate both packs.
+
+---
+
+### 3. How to Install and Play on Mobile (Android & iOS)
+
+The `.mcworld` and `.mcpack` files are 100% compatible with Minecraft Bedrock 1.26.40 on mobile devices (smartphones and tablets).
+
+#### 3.1. On Android
+1. **File Transfer**:
+   - Transfer `dist/mazescapist-bedrock-1.26.40.mcworld` to your device (via USB cable, Google Drive, Telegram, WhatsApp, or browser download).
+2. **Direct Import**:
+   - Open your file manager app (e.g., *Files by Google*, *Files*, or *ZArchiver*).
+   - Tap on the `mazescapist-bedrock-1.26.40.mcworld` file.
+   - Choose **"Open with Minecraft"** (or select Minecraft from the "Open with..." menu).
+   - Minecraft will launch and show: *"World import started..."* followed by *"World import completed successfully"*.
+3. **Troubleshooting**:
+   - If your system file manager tries to extract it as a ZIP, use the free app **ZArchiver**: long-press the file, tap *Open as* > *Minecraft*.
+
+#### 3.2. On iPhone / iPad (iOS)
+1. **File Transfer**:
+   - AirDrop `dist/mazescapist-bedrock-1.26.40.mcworld` from your Mac/PC or download it to the **Files** app via Safari / iCloud Drive.
+2. **Import**:
+   - In the **Files** app, tap the `mazescapist-bedrock-1.26.40.mcworld` file.
+   - Tap the Share button (square with an arrow pointing up) and select **Minecraft**.
+   - Minecraft will launch and import the world automatically.
+
+#### 3.3. Mobile Performance & Gameplay Tips
+- **Render Distance**: Set between 6 and 10 chunks on mid-range devices to maintain a smooth 60 FPS.
+- **On-Screen Keyboard / Commands**: Tap the chat icon at the top of the screen, tap the `/` button, and paste command functions.
+- **Touch Controls**: The maze has parkour sections; using the modern "Crosshair & Joystick" layout or a Bluetooth gamepad is recommended.
+
+---
+
+### 4. In-Game Initialization Procedure
+Upon loading into the world for the first time as operator (with cheats enabled):
+
+1. **Initialize Game Mechanics & Scoreboards**:
+   Open chat and run:
+   ```mcfunction
+   /function mazerunner/init_world
+   ```
+   This command will:
+   - Register the day counter scoreboard (`dayCounter`);
+   - Set up permanent ticking areas (`tickingarea`) for the maze core and doors;
+   - Spawn the commemorative Hall of Fame statues at their original positions.
+
+2. **Claim Starter Kit (Optional)**:
+   ```mcfunction
+   /function mazerunner/starter_kit
+   ```
+
+---
+
+### 5. Recommended Validation Tests
+
+1. **NPC Idempotency Test**:
+   ```mcfunction
+   /scoreboard players set DAY_COUNTER dayCounter 4
+   /function custom/generates_npc
+   ```
+   - Villager **Bruce** appears in the loading hub (`264, 59, -2184`) with original trades.
+   - Run `/function custom/generates_npc` a second time.
+   - **Expected Result**: No duplicate villager is spawned.
+
+2. **Maze Doors Test**:
+   ```mcfunction
+   /function custom/open_doors_1
+   ```
+   - Door 1 opens instantly without block desynchronization.
+   ```mcfunction
+   /function custom/close_all_doors
+   ```
+   - All 8 doors close securely.
+
+3. **Mob Emerald Drops Test**:
+   - Spawn a Zombie or Blaze and defeat it.
+   - **Expected Result**: The mob drops emeralds as defined in the datapack economy.
+
+---
+
+### 6. Integrity Hashes (SHA-256)
+
+Refer to [`dist/SHA256SUMS.txt`](../dist/SHA256SUMS.txt) for the latest build signatures.
