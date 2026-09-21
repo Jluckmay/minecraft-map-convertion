@@ -1,0 +1,24 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "mazerunner:prometheus",
+      "materials": {
+        "default": "skeleton"
+      },
+      "textures": {
+        "default": "textures/entity/skeleton/wither_skeleton"
+      },
+      "geometry": {
+        "default": "geometry.wither_skeleton"
+      },
+      "render_controllers": [
+        "controller.render.wither_skeleton"
+      ],
+      "spawn_egg": {
+        "texture": "spawn_egg",
+        "texture_index": 28
+      }
+    }
+  }
+}

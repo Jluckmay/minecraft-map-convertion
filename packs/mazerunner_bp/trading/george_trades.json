@@ -1,0 +1,68 @@
+{
+  "tiers": [
+    {
+      "trades": [
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 1
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:lapis_lazuli",
+              "quantity": 4
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 1
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:pumpkin_pie",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 1
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:sand",
+              "quantity": 16
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 4
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:mooshroom_spawn_egg",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        }
+      ]
+    }
+  ]
+}

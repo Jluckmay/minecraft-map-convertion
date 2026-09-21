@@ -1,0 +1,40 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Mazescapist Behavior Pack",
+    "description": "Mazescapist Behavior Pack for Bedrock 1.26.40",
+    "uuid": "ceba1432-a9c9-5ff3-828f-429a43f6630a",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      26,
+      40
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "description": "Mazescapist BP Logic",
+      "uuid": "3455404f-c71e-5fbe-91be-ab02ecb7788c",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "15bb3f51-336b-5fc8-882f-6e22db197541",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}

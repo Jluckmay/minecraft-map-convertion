@@ -1,0 +1,68 @@
+{
+  "tiers": [
+    {
+      "trades": [
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 1
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:iron_ingot",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 1
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:melon_slice",
+              "quantity": 8
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 1
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:carrot",
+              "quantity": 4
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 4
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:pig_spawn_egg",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        }
+      ]
+    }
+  ]
+}

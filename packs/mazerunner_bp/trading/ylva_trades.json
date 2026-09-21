@@ -1,0 +1,128 @@
+{
+  "tiers": [
+    {
+      "trades": [
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 30
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:diamond_helmet",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 60
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:diamond_chestplate",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 20
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:chainmail_leggings",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 15
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:chainmail_boots",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 30
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:iron_helmet",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 35
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:iron_chestplate",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 35
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:iron_leggings",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        },
+        {
+          "wants": [
+            {
+              "item": "minecraft:emerald",
+              "quantity": 30
+            }
+          ],
+          "gives": [
+            {
+              "item": "minecraft:iron_boots",
+              "quantity": 1
+            }
+          ],
+          "max_uses": 999999
+        }
+      ]
+    }
+  ]
+}

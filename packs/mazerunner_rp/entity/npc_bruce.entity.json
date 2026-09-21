@@ -1,0 +1,31 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "mazerunner:npc_bruce",
+      "materials": {
+        "default": "villager"
+      },
+      "textures": {
+        "default": "textures/entity/villager2/villager",
+        "profession": "textures/entity/villager2/professions/farmer",
+        "biome": "textures/entity/villager2/biomes/biome_savanna"
+      },
+      "geometry": {
+        "default": "geometry.villager_v2"
+      },
+      "scripts": {
+        "pre_animation": [
+          "variable.profession_index = 1;"
+        ]
+      },
+      "render_controllers": [
+        "controller.render.villager_v2"
+      ],
+      "spawn_egg": {
+        "texture": "spawn_egg",
+        "texture_index": 15
+      }
+    }
+  }
+}

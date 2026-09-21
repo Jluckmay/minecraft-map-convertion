@@ -1,0 +1,53 @@
+{
+  "format_version": "1.16.0",
+  "minecraft:entity": {
+    "description": {
+      "identifier": "mazerunner:prometheus",
+      "is_spawnable": true,
+      "is_summonable": true,
+      "is_experimental": false
+    },
+    "components": {
+      "minecraft:type_family": {
+        "family": [
+          "skeleton",
+          "monster",
+          "mob",
+          "undead"
+        ]
+      },
+      "minecraft:health": {
+        "value": 50,
+        "max": 50
+      },
+      "minecraft:movement": {
+        "value": 0.3
+      },
+      "minecraft:attack": {
+        "damage": 8
+      },
+      "minecraft:collision_box": {
+        "width": 0.7,
+        "height": 2.4
+      },
+      "minecraft:behavior.melee_attack": {
+        "priority": 3,
+        "speed_multiplier": 1.2
+      },
+      "minecraft:behavior.nearest_attackable_target": {
+        "priority": 2,
+        "entity_types": [
+          {
+            "filters": {
+              "test": "is_family",
+              "subject": "other",
+              "value": "player"
+            },
+            "max_dist": 20
+          }
+        ]
+      },
+      "minecraft:physics": {}
+    }
+  }
+}
