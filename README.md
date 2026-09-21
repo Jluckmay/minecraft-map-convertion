@@ -45,13 +45,16 @@ This tool solves this problem by analyzing the Java world directly, converting d
   - Converts `icon.png` into `world_icon.jpeg` and `pack_icon.png`.
 - **Packaging & Validation**:
   - Generates stable UUIDs v4 and manifest files configured for Bedrock 1.26.40.
-  - Packages the final `.mcworld` and standalone `.mcpack` files with SHA-256 integrity verification.
+  - Packages standalone `.mcpack` files and compiles `.mcworld` with SHA-256 integrity verification.
+
+> [!NOTE]
+> **Large Files Notice**: Heavy binary archives (`*.zip`, `*.mcworld` >50–100 MB) are excluded from the Git repository via `.gitignore` to adhere to GitHub file size limits. Place your input files into `inputs/` and run `python map_converter.py` to compile the final `.mcworld` locally.
 
 ### Requirements & Installation
 Ensure you have Python 3.10 or higher installed:
 
 ```bash
-git clone https://github.com/jluckmay/minecraft-map-convertion.git
+git clone https://github.com/Originais/map-convertion.git
 cd map-convertion
 pip install -r requirements.txt
 ```
@@ -122,23 +125,26 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
   - Cria manifestos válidos com UUIDs v4 exclusivos e compatibilidade declarada com Bedrock 1.26.40.
   - Gera o `.mcworld` final pronto para importação e os pacotes independentes `.mcpack`.
 
+> [!NOTE]
+> **Aviso sobre Arquivos Pesados**: Arquivos binários pesados (`*.zip`, `*.mcworld` >50–100 MB) estão excluídos do repositório Git via `.gitignore` para respeitar os limites de tamanho do GitHub. Coloque seus arquivos originais na pasta `inputs/` e execute `python map_converter.py` para gerar o `.mcworld` localmente.
+
 ---
 
 ### Estrutura do Projeto / Project Structure
 
 ```text
-minecraft-map-convertion/
-├── .gitignore                       # Ignora temporários e artefatos voláteis
+map-convertion/
+├── .gitignore                       # Ignora temporários, backups e arquivos pesados (*.zip, *.mcworld)
 ├── LICENSE                          # Licença MIT (Copyright 2026 João Lucas Mayrinck)
-├── README.md                        # Documentação bilíngue completa
+├── README.md                        # Documentação bilíngue completa (EN/PT)
 ├── requirements.txt                 # Dependências Python (nbtlib, Pillow)
 ├── map_converter.py                 # CLI e script principal de conversão
 │
-├── dist/                            # Entregáveis finais prontos para uso
-│   ├── mazescapist-bedrock-1.26.40.mcworld  # Mundo Bedrock pronto com pacotes integrados
+├── dist/                            # Pacotes compilados e verificação criptográfica
 │   ├── mazerunner-behavior-pack.mcpack     # Behavior Pack independente
 │   ├── mazerunner-resource-pack.mcpack     # Resource Pack independente
-│   └── SHA256SUMS.txt                      # Checksums SHA-256 dos entregáveis
+│   └── SHA256SUMS.txt                      # Hashes SHA-256 dos entregáveis
+│   # Nota: o arquivo mazescapist-bedrock-1.26.40.mcworld é gerado localmente
 │
 ├── docs/                            # Manuais técnicos e relatórios de auditoria
 │   ├── INSTRUCOES_INSTALACAO_E_TESTES.md   # Guia de instalação, testes e instruções para celular (Android / iOS)
@@ -147,21 +153,16 @@ minecraft-map-convertion/
 │   ├── RELATORIO_PERDAS_E_LIMITACOES.md    # Mapeamento de limitações e fallbacks adotados
 │   └── RELATORIO_COMANDOS_NAO_CONVERTIDOS.md # Auditoria de comandos e adaptações
 │
-├── inputs/                          # Arquivos-fonte originais
-│   ├── java-version.zip             # Mundo Java Edition 1.16.5 original
-│   ├── bedrock-version.mcworld      # Saída de terreno convertida pelo Chunker
-│   └── README.md                    # Documentação e hashes das fontes
+├── inputs/                          # Diretório para os arquivos de entrada
+│   └── README.md                    # Instruções para download e posicionamento dos mundos
+│   # Nota: java-version.zip e bedrock-version.mcworld são adicionados localmente
 │
 ├── packs/                           # Código-fonte aberto dos pacotes Bedrock
 │   ├── mazerunner_bp/               # Behavior Pack descompactado (entities, trading, functions, loot_tables)
 │   └── mazerunner_rp/               # Resource Pack descompactado (textures, entity)
 │
-├── tests/                           # Suíte de testes automatizados
-│   └── test_conversion.py           # Testes de integridade, JSON e manifestos
-│
-└── _backups/                        # Cópias de segurança originais imutáveis
-    ├── java-version.zip.bak
-    └── bedrock-version.mcworld.bak
+└── tests/                           # Suíte de testes automatizados
+    └── test_conversion.py           # Testes de integridade, JSON e manifestos
 ```
 
 ---

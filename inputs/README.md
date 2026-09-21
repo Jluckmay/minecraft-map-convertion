@@ -9,7 +9,9 @@
 <a name="português-pt-br"></a>
 ## Português (PT-BR)
 
-Este diretório contém os arquivos-fonte originais utilizados para o processo de conversão e bridge.
+Este diretório é reservado para os arquivos-fonte originais utilizados para o processo de conversão e bridge.
+
+> **Nota importante**: Devido às políticas de limite de tamanho de arquivos do GitHub (>100 MB), os arquivos compactados brutos (`*.zip` e `*.mcworld`) não são rastreados no Git (excluídos via `.gitignore`). O usuário deve disponibilizá-los localmente nesta pasta para executar o conversor.
 
 ### Arquivos Oficiais do Projeto
 
@@ -36,7 +38,9 @@ Se desejar converter outro mapa utilizando a ferramenta `map_converter.py`:
 <a name="english-en"></a>
 ## English (EN)
 
-This directory contains the original source files used in the conversion and bridge pipeline.
+This directory is designated for the original source files used in the conversion and bridge pipeline.
+
+> **Important Note**: Due to GitHub file size limitations (>100 MB), heavy raw archives (`*.zip` and `*.mcworld`) are excluded from Git tracking via `.gitignore`. Users must place them locally into this directory before running the converter.
 
 ### Official Project Files
 
