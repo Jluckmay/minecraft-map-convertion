@@ -54,7 +54,7 @@ This tool solves this problem by analyzing the Java world directly, converting d
 Ensure you have Python 3.10 or higher installed:
 
 ```bash
-git clone https://github.com/Originais/map-convertion.git
+git clone https://github.com/jluckmay/minecraft-map-convertion.git
 cd map-convertion
 pip install -r requirements.txt
 ```
