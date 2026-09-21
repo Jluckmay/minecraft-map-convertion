@@ -9,55 +9,51 @@
 <a name="português-pt-br"></a>
 ## Português (PT-BR)
 
-Este diretório é reservado para os arquivos-fonte originais utilizados para o processo de conversão e bridge.
+Este diretório é o local padrão para posicionar os arquivos de entrada do mapa que você deseja converter.
 
-> **Nota importante**: Devido às políticas de limite de tamanho de arquivos do GitHub (>100 MB), os arquivos compactados brutos (`*.zip` e `*.mcworld`) não são rastreados no Git (excluídos via `.gitignore`). O usuário deve disponibilizá-los localmente nesta pasta para executar o conversor.
+### Arquivos Esperados
 
-### Arquivos Oficiais do Projeto
+Para realizar a conversão completa de um mapa de **Minecraft Java Edition** para **Minecraft Bedrock Edition 1.26.40+**, você precisará de dois arquivos:
 
-1. **`java-version.zip`**
-   - **Origem**: Mundo Java Edition 1.16.5 original do mapa Mazescapist / MazeRunner.
-   - **Tamanho**: ~224.7 MB (224.707.649 bytes)
-   - **SHA-256**: `16ac4e38618a47bee3771bb97dd48024ceb6c350a55fa264bdd6cd99cf42833a`
-   - **Conteúdo**: Regiões MCA (`region/r.*.*.mca`), `level.dat`, `playerdata/`, datapack `MazeRunner` (`data/custom/functions/`, `loot_tables/`), `resources.zip` / assets de texturas.
+1. **Mundo Java Original (`.zip`)**:
+   - Arquivo compactado do mundo Java Edition (contendo pastas como `region/`, `level.dat`, `datapacks/`, etc.).
+   - Pode ser nomeado como preferir (ex: `meu_mapa_java.zip`).
+2. **Mundo Bedrock Base do Chunker (`.mcworld`)**:
+   - Saída gerada pela ferramenta [Chunker](https://chunker.app), contendo o terreno e biomas já convertidos para o banco LevelDB.
+   - Pode ser nomeado como preferir (ex: `meu_mapa_chunker.mcworld`).
 
-2. **`bedrock-version.mcworld`**
-   - **Origem**: Conversão base de terreno, blocos, biomas e dimensões gerada via ferramenta Chunker.
-   - **Tamanho**: ~75.2 MB (75.289.246 bytes)
-   - **SHA-256**: `28c99e1f83982fbc72b01179ef22de7a7a84e69880bcc21a76f12558606ee5f1`
-   - **Conteúdo**: Banco LevelDB compilado com o terreno do labirinto, contêineres e mapas Bedrock.
+> **Nota**: Arquivos binários pesados de mundos (`*.zip` e `*.mcworld`) não são versionados no Git (excluídos via `.gitignore`) para respeitar as políticas de limite do GitHub.
 
-### Usando Outros Mapas
+### Como Executar
 
-Se desejar converter outro mapa utilizando a ferramenta `map_converter.py`:
-- Coloque o ZIP do mundo Java como `inputs/java-version.zip` (ou passe via `--java <caminho>`).
-- Coloque o MCWORLD convertido pelo Chunker como `inputs/bedrock-version.mcworld` (ou passe via `--bedrock <caminho>`).
+Basta colocar seus arquivos aqui e executar:
+```bash
+python map_converter.py --java inputs/<seu_mundo_java>.zip --bedrock inputs/<seu_mundo_bedrock>.mcworld
+```
 
 ---
 
 <a name="english-en"></a>
 ## English (EN)
 
-This directory is designated for the original source files used in the conversion and bridge pipeline.
+This directory is the default location to place input world files for conversion.
 
-> **Important Note**: Due to GitHub file size limitations (>100 MB), heavy raw archives (`*.zip` and `*.mcworld`) are excluded from Git tracking via `.gitignore`. Users must place them locally into this directory before running the converter.
+### Expected Files
 
-### Official Project Files
+To convert any **Minecraft Java Edition** world to **Minecraft Bedrock Edition 1.26.40+**, you will need two files:
 
-1. **`java-version.zip`**
-   - **Origin**: Original Java Edition 1.16.5 world of the Mazescapist / MazeRunner map.
-   - **Size**: ~224.7 MB (224,707,649 bytes)
-   - **SHA-256**: `16ac4e38618a47bee3771bb97dd48024ceb6c350a55fa264bdd6cd99cf42833a`
-   - **Contents**: Anvil MCA regions (`region/r.*.*.mca`), `level.dat`, `playerdata/`, `MazeRunner` datapack (`data/custom/functions/`, `loot_tables/`), and `resources.zip` / texture assets.
+1. **Original Java World (`.zip`)**:
+   - Zipped archive of the Java Edition world (containing folders such as `region/`, `level.dat`, `datapacks/`, etc.).
+   - Can be named freely (e.g., `my_java_world.zip`).
+2. **Base Bedrock World from Chunker (`.mcworld`)**:
+   - Output produced by [Chunker](https://chunker.app), containing terrain, blocks, and biomes converted into the LevelDB database.
+   - Can be named freely (e.g., `my_chunker_world.mcworld`).
 
-2. **`bedrock-version.mcworld`**
-   - **Origin**: Base conversion of terrain, blocks, biomes, and dimensions generated via the Chunker tool.
-   - **Size**: ~75.2 MB (75,289,246 bytes)
-   - **SHA-256**: `28c99e1f83982fbc72b01179ef22de7a7a84e69880bcc21a76f12558606ee5f1`
-   - **Contents**: LevelDB database compiled with maze terrain, containers, and Bedrock maps.
+> **Note**: Heavy binary world archives (`*.zip` and `*.mcworld`) are not tracked in Git (excluded via `.gitignore`) to comply with GitHub file size limits.
 
-### Using Other Maps
+### How to Run
 
-To convert a different map using the `map_converter.py` tool:
-- Place the Java world ZIP archive as `inputs/java-version.zip` (or pass it via `--java <path>`).
-- Place the Chunker-converted MCWORLD as `inputs/bedrock-version.mcworld` (or pass it via `--bedrock <path>`).
+Place your files here and execute:
+```bash
+python map_converter.py --java inputs/<your_java_world>.zip --bedrock inputs/<your_bedrock_world>.mcworld
+```

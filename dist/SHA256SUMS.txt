@@ -1,4 +1,0 @@
-# Checksums SHA-256 dos entregáveis finais (Mazescapist Bedrock 1.26.40)
-2f08eb5cecf08a42ace4cfd7dc3e597cc46eb1fd9960fa160e491587b6b4f5a0 *mazescapist-bedrock-1.26.40.mcworld
-49edcaa317ea1c2cdbf683557f0545e947ef8b5de813d5b5bcf6e03ef70a1672 *mazerunner-behavior-pack.mcpack
-78e501aefd30d14e7f81badb276412827f4537aaac5844ea0058b27cbebb042f *mazerunner-resource-pack.mcpack

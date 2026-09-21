@@ -11,13 +11,18 @@ temp_*/
 *.bak.tmp
 _backups/
 
-# Heavy binary Minecraft world archives (excluded from GitHub / >50MB limits)
+# Heavy binary Minecraft world archives (>50MB limits)
 *.zip
 *.mcworld
 inputs/*.zip
 inputs/*.mcworld
-dist/*.mcworld
 !inputs/README.md
+
+# Build output directories (generated locally by map_converter.py)
+dist/*
+!dist/.gitkeep
+packs/*
+!packs/.gitkeep
 
 # OS specific files
 .DS_Store

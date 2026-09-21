@@ -1,7 +1,7 @@
 # Minecraft Map Converter & Bridge Tool (Java <-> Bedrock 1.26.40+)
 
 [![Minecraft Bedrock](https://img.shields.io/badge/Minecraft%20Bedrock-1.26.40%2B-green.svg)](https://minecraft.net/)
-[![Minecraft Java](https://img.shields.io/badge/Minecraft%20Java-1.16.5%2B-orange.svg)](https://minecraft.net/)
+[![Minecraft Java](https://img.shields.io/badge/Minecraft%20Java-1.16%2B-orange.svg)](https://minecraft.net/)
 [![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Author](https://img.shields.io/badge/Author-Jo%C3%A3o%20Lucas%20Mayrinck-blueviolet.svg)](#author--autor)
@@ -18,15 +18,15 @@
 ## English (EN)
 
 ### Overview
-**Minecraft Map Converter & Bridge Tool** is an automated, robust conversion pipeline designed to bridge the fundamental gaps between Minecraft Java Edition and Minecraft Bedrock Edition (specifically tailored for **Bedrock 1.26.40+**).
+**Minecraft Map Converter & Bridge Tool** is an automated, robust conversion pipeline designed to bridge the fundamental gaps between Minecraft Java Edition and Minecraft Bedrock Edition (specifically optimized for **Bedrock 1.26.40+**).
 
-While existing terrain tools (such as Chunker or Amulet) successfully convert blocks, biomes, containers, and dimensions, they **do not convert entities, player inventories, custom villager NBT trades, or datapack logic**.
+While existing terrain tools (such as [Chunker](https://chunker.app) or Amulet) convert blocks, biomes, containers, and dimensions, they **do not convert entities, player inventories, custom villager NBT trades, or datapack logic**.
 
 This tool solves this problem by analyzing the Java world directly, converting datapacks into native **Behavior Packs** and **Resource Packs**, extracting custom trades into Bedrock Trade Tables, translating commands with full idempotency, and packaging everything cleanly into importable `.mcworld` and `.mcpack` files.
 
 ### Key Features
 - **Terrain Integrity**: Preserves the converted LevelDB database 100% untouched—no risky binary chunk writes.
-- **Deep Region & Entity Audit**: Scans Anvil `.mca` files across all dimensions (Overworld, Nether) and decompresses zlib chunk payloads to detect all entities, tile entities, and command blocks.
+- **Deep Region & Entity Audit**: Scans Anvil `.mca` files across all dimensions (Overworld, Nether, End) and decompresses zlib chunk payloads to detect all entities, tile entities, and command blocks.
 - **Custom Villager & NPC Conversion**:
   - Automatically parses Java NBT `Offers:{Recipes:[...]}` from summon commands in functions and command blocks.
   - Generates Bedrock Trade Tables (`trading/*.json`) preserving exact emerald costs, items, and quantities.
@@ -37,11 +37,11 @@ This tool solves this problem by analyzing the Java world directly, converting d
   - Automatically wraps summon commands with `unless entity @e[type=...]` to ensure **zero duplication** upon repeated execution.
   - Converts JSON `/tellraw` commands into Bedrock `{"rawtext": [...]}` with embedded color formatting codes (`§a`, `§6`, etc.).
   - Translates sound event identifiers (e.g., `entity.player.levelup` $\rightarrow$ `random.levelup`).
-  - Converts `/forceload` and `/data merge block` into safe documentation and continuous simulation areas (`tickingarea`).
+  - Converts `/forceload` into safe documentation and continuous simulation areas (`tickingarea`).
 - **Entity Loot Table Translation**:
-  - Automatically converts custom mob loot tables (pools, rolls, `set_count`, `looting_enchant`, `killed_by_player`) to Bedrock JSON format (e.g., restoring mob emerald drop economies).
+  - Automatically converts custom mob loot tables (pools, rolls, `set_count`, `looting_enchant`, `killed_by_player`) to Bedrock JSON format.
 - **Embedded Resource Extraction**:
-  - Extracts custom block textures (e.g., bedrock wall variants) and generates `terrain_texture.json`.
+  - Extracts custom block textures and generates `terrain_texture.json`.
   - Converts `icon.png` into `world_icon.jpeg` and `pack_icon.png`.
 - **Packaging & Validation**:
   - Generates stable UUIDs v4 and manifest files configured for Bedrock 1.26.40.
@@ -65,30 +65,28 @@ pip install -r requirements.txt
 # Display help and available options
 python map_converter.py --help
 
-# Run with default directories (auto-discovers inputs/ or root files)
-python map_converter.py
+# Run with custom input worlds
+python map_converter.py --java inputs/my_world.zip --bedrock inputs/my_world_chunker.mcworld --output dist/
 
-# Custom execution
-python map_converter.py --java inputs/java-version.zip --bedrock inputs/bedrock-version.mcworld --output dist/
-
-# Run automated integrity test suite
+# Run automated test suite
 python tests/test_conversion.py
 ```
 
 #### CLI Arguments:
-- `--java`: Path to the Java world ZIP archive (Default: auto-resolves `inputs/java-version.zip` or `java-version.zip`).
-- `--bedrock`: Path to the initial Bedrock `.mcworld` converted by Chunker (Default: auto-resolves `inputs/bedrock-version.mcworld` or `bedrock-version.mcworld`).
+- `--java`: Path to the Java world ZIP archive.
+- `--bedrock`: Path to the initial Bedrock `.mcworld` converted by Chunker.
 - `--output`: Output directory for generated deliverables (`.mcworld`, `.mcpack`, `SHA256SUMS.txt`) [Default: `dist`].
 - `--packs`: Output directory for unpacked Behavior and Resource Packs [Default: `packs`].
-- `--keep-temp`: Preserves intermediate temporary world extraction directory (`dist/work_bedrock`).
+- `--name`: Custom name for the generated world and packs (Default: auto-detected from `level.dat`).
+- `--keep-temp`: Preserves intermediate temporary world extraction directory.
 
 ### Technical Documentation & Reports
-All in-depth audit reports, conversion documentation, and manuals are available in bilingual format (PT-BR / EN) inside the [`docs/`](docs/) directory:
-- 📱 [**Installation, Testing & Mobile (Android / iOS) Guide**](docs/INSTRUCOES_INSTALACAO_E_TESTES.md)
-- 📊 [**Java Entity Audit & Census Report (2,031 entities)**](docs/RELATORIO_AUDITORIA_ENTIDADES.md)
-- 🛠️ [**General Java $\rightarrow$ Bedrock Technical Conversion Report**](docs/RELATORIO_CONVERSAO.md)
-- ⚠️ [**Engine Limitations, Fallbacks & Loss Mapping Report**](docs/RELATORIO_PERDAS_E_LIMITACOES.md)
-- 📜 [**Adapted & Unconverted Commands Report**](docs/RELATORIO_COMANDOS_NAO_CONVERTIDOS.md)
+All in-depth technical documentation and manuals are available in bilingual format (PT-BR / EN) inside the [`docs/`](docs/) directory:
+- 📱 [**Installation, Activation & Mobile (Android / iOS) Guide**](docs/INSTRUCOES_INSTALACAO_E_USO.md)
+- 🛠️ [**Technical Conversion Architecture & Pipeline**](docs/ARQUITETURA_DE_CONVERSAO.md)
+- 📊 [**World & Entity Audit Guide (Anvil Regions, NBT, Playerdata)**](docs/GUIA_AUDITORIA_DE_MUNDOS.md)
+- 📜 [**Command Translation Guide (Java to Bedrock Syntax)**](docs/GUIA_TRADUCAO_COMANDOS.md)
+- ⚠️ [**Technical Limitations & Engine Differences (Java vs Bedrock)**](docs/LIMITACOES_TECNICAS_JAVA_BEDROCK.md)
 
 ---
 
@@ -98,13 +96,13 @@ All in-depth audit reports, conversion documentation, and manuals are available 
 ### Visão Geral
 O **Minecraft Map Converter & Bridge Tool** é um utilitário automatizado de conversão e ponte complementar projetado para suprir as lacunas estruturais entre o Minecraft Java Edition e o Minecraft Bedrock Edition (otimizado para **Bedrock 1.26.40+**).
 
-Enquanto ferramentas como o Chunker ou o Amulet convertem com excelência os blocos, biomas, dimensões e contêineres, **elas não convertem entidades, inventários de jogadores, trocas NBT customizadas de aldeões ou a lógica de datapacks**.
+Enquanto ferramentas como o [Chunker](https://chunker.app) ou o Amulet convertem com excelência os blocos, biomas, dimensões e contêineres, **elas não convertem entidades, inventários de jogadores, trocas NBT customizadas de aldeões ou a lógica de datapacks**.
 
 Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, convertendo datapacks em **Behavior Packs** e **Resource Packs** nativos, traduzindo comandos com garantia matemática de **idempotência** (sem duplicação de entidades), gerando tabelas de troca Bedrock nativas e empacotando o resultado em arquivos prontos `.mcworld` e `.mcpack`.
 
 ### Funcionalidades Principais
 - **Preservação Integral do Terreno**: Mantém o banco LevelDB convertido 100% intocado, sem escritas manuais ou riscos de corrupção nos chunks.
-- **Auditoria Profunda de Regiões MCA**: Faz a leitura dos cabeçalhos dos arquivos `.mca` do Overworld e Nether, descomprime os blocos zlib e extrai todas as entidades, tile entities e blocos de comando.
+- **Auditoria Profunda de Regiões MCA**: Faz a leitura dos cabeçalhos dos arquivos `.mca` de todas as dimensões, descomprime os blocos zlib e extrai todas as entidades, tile entities e blocos de comando.
 - **Conversão Completa de NPCs e Comércio**:
   - Extrai as receitas NBT `{Offers:{Recipes:[...]}}` de comandos em funções e blocos de comando.
   - Gera tabelas de troca Bedrock (`trading/*.json`) preservando preços em esmeraldas, itens e quantidades.
@@ -115,11 +113,11 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
   - Adiciona automaticamente a cláusula `unless entity @e[type=...]` para impedir duplicações mesmo se a função for acionada repetidamente.
   - Converte comandos `/tellraw` para a sintaxe Bedrock `{"rawtext": [...]}` com códigos de formatação de cores (`§a`, `§6`, etc.).
   - Traduz eventos de som (`entity.player.levelup` $\rightarrow$ `random.levelup`).
-  - Adapta `/forceload` e `/data merge block` para áreas contínuas (`tickingarea`) e documentação técnica.
+  - Adapta `/forceload` para áreas contínuas (`tickingarea`) e documentação técnica.
 - **Conversão de Tabelas de Saque (Loot Tables)**:
-  - Traduz as tabelas de saque de monstros (pools, rolls, looting, contagens) para o formato JSON do Bedrock (recompondo drops de esmeraldas e economia).
+  - Traduz as tabelas de saque de monstros (pools, rolls, looting, contagens) para o formato JSON do Bedrock.
 - **Extração de Recursos e Texturas**:
-  - Extrai texturas de blocos do pacote de recursos Java e gera o arquivo `terrain_texture.json`.
+  - Extrai texturas personalizadas de blocos e gera o arquivo `terrain_texture.json`.
   - Gera `world_icon.jpeg` e `pack_icon.png` a partir do `icon.png` original.
 - **Empacotamento e Hashes SHA-256**:
   - Cria manifestos válidos com UUIDs v4 exclusivos e compatibilidade declarada com Bedrock 1.26.40.
@@ -134,46 +132,41 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
 
 ```text
 map-convertion/
-├── .gitignore                       # Ignora temporários, backups e arquivos pesados (*.zip, *.mcworld)
+├── .gitignore                       # Ignora temporários, backups e mundos pesados (*.zip, *.mcworld)
 ├── LICENSE                          # Licença MIT (Copyright 2026 João Lucas Mayrinck)
 ├── README.md                        # Documentação bilíngue completa (EN/PT)
 ├── requirements.txt                 # Dependências Python (nbtlib, Pillow)
 ├── map_converter.py                 # CLI e script principal de conversão
 │
-├── dist/                            # Pacotes compilados e verificação criptográfica
-│   ├── mazerunner-behavior-pack.mcpack     # Behavior Pack independente
-│   ├── mazerunner-resource-pack.mcpack     # Resource Pack independente
-│   └── SHA256SUMS.txt                      # Hashes SHA-256 dos entregáveis
-│   # Nota: o arquivo mazescapist-bedrock-1.26.40.mcworld é gerado localmente
+├── dist/                            # Diretório de saída dos entregáveis compilados (.mcworld, .mcpack)
+│   └── .gitkeep
 │
-├── docs/                            # Manuais técnicos e relatórios de auditoria
-│   ├── INSTRUCOES_INSTALACAO_E_TESTES.md   # Guia de instalação, testes e instruções para celular (Android / iOS)
-│   ├── RELATORIO_AUDITORIA_ENTIDADES.md    # Censo e auditoria detalhada de 2031 entidades Java
-│   ├── RELATORIO_CONVERSAO.md              # Relatório técnico completo de conversão
-│   ├── RELATORIO_PERDAS_E_LIMITACOES.md    # Mapeamento de limitações e fallbacks adotados
-│   └── RELATORIO_COMANDOS_NAO_CONVERTIDOS.md # Auditoria de comandos e adaptações
+├── docs/                            # Manuais técnicos e guias de arquitetura
+│   ├── INSTRUCOES_INSTALACAO_E_USO.md      # Guia de instalação, testes e instruções para PC e celular
+│   ├── ARQUITETURA_DE_CONVERSAO.md         # Explicação da arquitetura do pipeline
+│   ├── GUIA_AUDITORIA_DE_MUNDOS.md         # Guia de leitura e auditoria de regiões MCA e NBT
+│   ├── GUIA_TRADUCAO_COMANDOS.md           # Mapeamento de sintaxe de comandos Java -> Bedrock
+│   └── LIMITACOES_TECNICAS_JAVA_BEDROCK.md # Comparativo e limitações técnicas das duas engines
 │
 ├── inputs/                          # Diretório para os arquivos de entrada
 │   └── README.md                    # Instruções para download e posicionamento dos mundos
-│   # Nota: java-version.zip e bedrock-version.mcworld são adicionados localmente
 │
-├── packs/                           # Código-fonte aberto dos pacotes Bedrock
-│   ├── mazerunner_bp/               # Behavior Pack descompactado (entities, trading, functions, loot_tables)
-│   └── mazerunner_rp/               # Resource Pack descompactado (textures, entity)
+├── packs/                           # Diretório de saída dos pacotes descompactados para edição
+│   └── .gitkeep
 │
 └── tests/                           # Suíte de testes automatizados
-    └── test_conversion.py           # Testes de integridade, JSON e manifestos
+    └── test_conversion.py           # Testes unitários do motor de conversão
 ```
 
 ---
 
 ### Documentação Técnica / Technical Reports
-Todos os relatórios aprofundados e manuais de operação estão centralizados no diretório [`docs/`](docs/):
-- 📱 [**Instruções de Instalação, Testes e Uso no Celular (Android / iOS)**](docs/INSTRUCOES_INSTALACAO_E_TESTES.md)
-- 📊 [**Relatório de Auditoria de Entidades Java (Censo Completo)**](docs/RELATORIO_AUDITORIA_ENTIDADES.md)
-- 🛠️ [**Relatório Geral de Conversão Java $\rightarrow$ Bedrock**](docs/RELATORIO_CONVERSAO.md)
-- ⚠️ [**Relatório de Perdas, Fallbacks e Limitações da Engine**](docs/RELATORIO_PERDAS_E_LIMITACOES.md)
-- 📜 [**Relatório de Comandos Não Convertidos e Adaptados**](docs/RELATORIO_COMANDOS_NAO_CONVERTIDOS.md)
+Todos os guias técnicos e manuais de operação estão centralizados no diretório [`docs/`](docs/):
+- 📱 [**Instruções de Instalação, Ativação e Uso (PC e Celular Android / iOS)**](docs/INSTRUCOES_INSTALACAO_E_USO.md)
+- 🛠️ [**Arquitetura Técnica de Conversão do Pipeline**](docs/ARQUITETURA_DE_CONVERSAO.md)
+- 📊 [**Guia de Auditoria de Mundos e Entidades (Anvil MCA, NBT, Playerdata)**](docs/GUIA_AUDITORIA_DE_MUNDOS.md)
+- 📜 [**Guia de Tradução de Comandos (Java $\rightarrow$ Bedrock 1.26.40)**](docs/GUIA_TRADUCAO_COMANDOS.md)
+- ⚠️ [**Limitações Técnicas e Diferenças de Engine (Java vs Bedrock)**](docs/LIMITACOES_TECNICAS_JAVA_BEDROCK.md)
 
 ---
 
