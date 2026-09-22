@@ -52,6 +52,25 @@ except ImportError:
     HAS_PIL = False
 
 
+try:
+    import crc32c
+    def calc_crc32c(data: bytes) -> int:
+        return crc32c.crc32c(data)
+except ImportError:
+    def calc_crc32c(data: bytes) -> int:
+        crc = 0xFFFFFFFF
+        for byte in data:
+            crc ^= byte
+            for _ in range(8):
+                crc = (crc >> 1) ^ (0x82F63B78 if (crc & 1) else 0)
+        return crc ^ 0xFFFFFFFF
+
+
+def mask_crc(c: int) -> int:
+    """Aplica a máscara CRC padrão do LevelDB."""
+    return (((c >> 15) | (c << 17)) + 0xa282ead8) & 0xffffffff
+
+
 def sha256_file(filepath: str) -> str:
     """Calcula o hash SHA-256 de um arquivo."""
     h = hashlib.sha256()
@@ -59,6 +78,7 @@ def sha256_file(filepath: str) -> str:
         while chunk := f.read(8192 * 1024):
             h.update(chunk)
     return h.hexdigest()
+
 
 
 class JavaWorldAuditor:
@@ -199,14 +219,19 @@ class JavaWorldAuditor:
 
 
 class DatapackConverter:
-    """Traduz comandos Java para sintaxe moderna Bedrock 1.26.40+."""
+    """Traduz comandos Java para sintaxe moderna Bedrock 1.20+."""
 
     COLOR_MAP = {
         "black": "§0", "dark_blue": "§1", "dark_green": "§2", "dark_aqua": "§3",
         "dark_red": "§4", "dark_purple": "§5", "gold": "§6", "gray": "§7",
         "dark_gray": "§8", "blue": "§9", "green": "§a", "aqua": "§b",
         "red": "§c", "light_purple": "§d", "yellow": "§e", "white": "§f",
-        "bold": "§l", "italic": "§o"
+        "bold": "§l", "italic": "§o", "underlined": "§n", "reset": "§r"
+    }
+
+    HEX_COLOR_MAP = {
+        "#FFAA00": "§6", "#BB7700": "§6", "#FF5500": "§c", "#AA0000": "§4",
+        "#EEEEEE": "§f", "#654321": "§8"
     }
 
     SOUND_MAP = {
@@ -217,44 +242,123 @@ class DatapackConverter:
         "block.anvil.use": "random.anvil_use",
         "entity.wither.spawn": "mob.wither.spawn",
         "entity.wither.death": "mob.wither.death",
-        "entity.ender_dragon.growl": "mob.enderdragon.growl"
+        "entity.ender_dragon.growl": "mob.enderdragon.growl",
+        "block.end_portal.spawn": "portal.travel",
+        "entity.evoker.prepare_summon": "mob.evoker.prepare_summon",
+        "entity.skeleton_horse.death": "mob.skeleton_horse.death",
+        "entity.elder_guardian.curse": "mob.elderguardian.curse"
     }
 
     @classmethod
-    def convert_command(cls, line: str, known_npcs: set = None) -> str:
-        s_line = line.strip()
-        if not s_line or s_line.startswith("#"):
+    def convert_command(cls, line: str, known_npcs: set = None, world_safe_name: str = "custom") -> str:
+        s = line.strip()
+        if not s or s.startswith("#"):
             return line
 
-        # 1. forceload -> Comentário com tickingarea
-        if s_line.startswith("forceload add ") or s_line.startswith("forceload remove "):
-            return f"# [Bedrock Conversion] {s_line} (coberto por tickingarea persistente)"
+        # 1. Remover barra inicial caso exista (normal em command blocks)
+        if s.startswith('/'):
+            s = s[1:].strip()
 
-        # 2. data merge block {Delay:0}
-        if s_line.startswith("data merge block ") and "Delay:0" in s_line:
-            return f"# [Bedrock Conversion] {s_line} (spawners ativam nativamente por proximidade no Bedrock)"
+        # 2. forceload -> Comentário com tickingarea
+        if s.startswith("forceload add ") or s.startswith("forceload remove "):
+            return f"# [Bedrock Conversion] {s} (coberto por tickingarea persistente)"
 
-        # 3. playsound
+        # 3. data merge block {Delay:0}
+        if s.startswith("data merge block ") and "Delay:0" in s:
+            return f"# [Bedrock Conversion] {s} (spawners ativam nativamente por proximidade no Bedrock)"
+
+        # 4. Seletores de distância Java: distance=..X -> r=X, distance=X..Y -> rm=X,r=Y
+        s = re.sub(r'distance=\.\.([0-9.]+)', r'r=\1', s)
+        s = re.sub(r'distance=([0-9.]+)\.\.([0-9.]+)', r'rm=\1,r=\2', s)
+        s = re.sub(r'distance=([0-9.]+)', r'r=\1', s)
+
+        # 5. Sintaxe de dimensões e execute: in minecraft:overworld -> in overworld
+        s = s.replace("in minecraft:overworld", "in overworld")
+        s = s.replace("in minecraft:the_nether", "in nether")
+        s = s.replace("in minecraft:the_end", "in the_end")
+        s = s.replace("run execute in ", "in ")
+
+        # 6. tp sem alvo dentro de execute: run tp <x> <y> <z> -> run tp @s <x> <y> <z>
+        s = re.sub(r'\brun tp (-?[0-9~^.]+) (-?[0-9~^.]+) (-?[0-9~^.]+)', r'run tp @s \1 \2 \3', s)
+
+        # 7. Chamadas de função: function custom:name -> function custom/name
+        s = re.sub(r'\bfunction ([a-zA-Z0-9_]+):([a-zA-Z0-9_/-]+)', r'function \1/\2', s)
+
+        # 8. Identificadores de blocos comuns sem namespace
+        s = re.sub(r'\bminecraft:(redstone_block|smooth_stone|air|stone|dirt|sand|glass|bedrock)\b', r'\1', s)
+
+        # 9. playsound
+        if "playsound" in s:
+            s = cls._convert_playsound(s)
+
+        # 10. effect give
+        if "effect give" in s or s.startswith("effect "):
+            s = cls._convert_effect(s)
+
+        # 11. tellraw com cores e formatação
+        if "tellraw" in s and ('"text"' in s or '"translate"' in s or '["' in s):
+            s = cls._convert_tellraw(s)
+
+        # 12. title
+        if "title " in s and ("{" in s or "[" in s):
+            s = cls._convert_title(s)
+
+        # 13. particle
+        if "particle " in s:
+            s = cls._convert_particle(s)
+
+        # 14. give written_book
+        if "give " in s and "written_book{" in s:
+            s = re.sub(r'give (@[apser]|[\w]+) written_book.*?( \d+)?$', r'give \1 written_book\2', s)
+
+        # 15. summon conversion
+        if "summon " in s:
+            s = cls._convert_summon(s, world_safe_name, known_npcs)
+
+        # 16. gamerules
+        if s.startswith("gamerule "):
+            s = s.replace("doDaylightCycle", "dodaylightcycle")
+            s = s.replace("doMobSpawning", "domobspawning")
+            s = s.replace("randomTickSpeed", "randomtickspeed")
+
+        return s
+
+    @classmethod
+    def _convert_playsound(cls, line: str) -> str:
         for j_snd, b_snd in cls.SOUND_MAP.items():
-            if j_snd in s_line:
-                s_line = s_line.replace(f"minecraft:{j_snd}", b_snd).replace(j_snd, b_snd)
-                s_line = re.sub(r' (master|ambient|voice|record|music|block|neutral) ', ' ', s_line)
+            line = line.replace(f"minecraft:{j_snd}", b_snd).replace(j_snd, b_snd)
+        line = re.sub(r' (master|ambient|voice|record|music|block|neutral|hostile|weather|player) ', ' ', line)
+        return line
 
-        # 4. tellraw com cores e formatação
-        if "tellraw" in s_line and ('"text"' in s_line or '"translate"' in s_line):
-            s_line = cls._convert_tellraw(s_line)
+    @classmethod
+    def _convert_effect(cls, line: str) -> str:
+        if "minecraft:glowing" in line or " glowing " in line:
+            return f"# [Bedrock: glowing effect not supported] {line}"
+        effects = [
+            "blindness", "speed", "slowness", "haste", "strength", "regeneration",
+            "resistance", "fire_resistance", "water_breathing", "invisibility",
+            "night_vision", "weakness", "poison", "wither", "absorption",
+            "saturation", "levitation", "slow_falling"
+        ]
+        for eff in effects:
+            line = line.replace(f"minecraft:{eff}", eff)
+        return line
 
-        # 5. Idempotência em invocações /summon de NPCs customizados
-        if known_npcs and "summon " in s_line:
-            for npc in known_npcs:
-                if f":npc_{npc}" in s_line and not s_line.startswith("execute unless entity"):
-                    s_line = f"execute unless entity @e[type=namespace:npc_{npc}] run {s_line}"
-
-        return s_line
+    @classmethod
+    def _convert_particle(cls, line: str) -> str:
+        m = re.match(r'^(.*?\bparticle\s+)([a-zA-Z0-9:_.]+)\s+([~^0-9.-]+)\s+([~^0-9.-]+)\s+([~^0-9.-]+).*$', line)
+        if m:
+            prefix, name, x, y, z = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)
+            if "large_smoke" in name:
+                name = "minecraft:large_smoke"
+            elif "campfire_signal_smoke" in name:
+                name = "minecraft:campfire_smoke_particle"
+            return f"{prefix}{name} {x} {y} {z}"
+        return line
 
     @classmethod
     def _convert_tellraw(cls, line: str) -> str:
-        m = re.match(r'^(.*tellraw\s+@[a-zA-Z0-9_]+\s+)(.*)$', line)
+        m = re.match(r'^(.*?\btellraw\s+@[a-zA-Z0-9_]+\s+)(.*)$', line)
         if not m:
             return line
         prefix, raw_json = m.group(1), m.group(2)
@@ -264,19 +368,24 @@ class DatapackConverter:
 
             def process_node(node):
                 if isinstance(node, str):
-                    rawtext_elements.append({"text": node})
+                    if node:
+                        rawtext_elements.append({"text": node})
                 elif isinstance(node, list):
                     for n in node:
                         process_node(n)
                 elif isinstance(node, dict):
-                    txt = node.get("text", "")
-                    color = node.get("color", "")
-                    color_code = cls.COLOR_MAP.get(color, "")
-                    bold_code = "§l" if node.get("bold") else ""
-                    italic_code = "§o" if node.get("italic") else ""
-                    formatted = f"{color_code}{bold_code}{italic_code}{txt}§r" if (color_code or bold_code or italic_code) else txt
-                    if formatted:
-                        rawtext_elements.append({"text": formatted})
+                    if "score" in node:
+                        rawtext_elements.append({"score": node["score"]})
+                    else:
+                        txt = node.get("text", "")
+                        color = node.get("color", "")
+                        color_code = cls.COLOR_MAP.get(color) or cls.HEX_COLOR_MAP.get(color, "")
+                        bold_code = "§l" if node.get("bold") else ""
+                        italic_code = "§o" if node.get("italic") else ""
+                        under_code = "§n" if node.get("underlined") else ""
+                        formatted = f"{color_code}{bold_code}{italic_code}{under_code}{txt}§r" if (color_code or bold_code or italic_code or under_code) else txt
+                        if formatted:
+                            rawtext_elements.append({"text": formatted})
                     for extra in node.get("extra", []):
                         process_node(extra)
 
@@ -287,6 +396,88 @@ class DatapackConverter:
         except Exception:
             pass
         return line
+
+    @classmethod
+    def _convert_title(cls, line: str) -> str:
+        m = re.match(r'^(.*?\btitle\s+@[a-zA-Z0-9_]+\s+(?:title|subtitle|actionbar)\s+)(.*)$', line)
+        if not m:
+            return line
+        prefix, raw_json = m.group(1), m.group(2)
+        try:
+            parsed = json.loads(raw_json)
+            rawtext_elements = []
+
+            def process_node(node):
+                if isinstance(node, str):
+                    if node:
+                        rawtext_elements.append({"text": node})
+                elif isinstance(node, list):
+                    for n in node:
+                        process_node(n)
+                elif isinstance(node, dict):
+                    if "score" in node:
+                        rawtext_elements.append({"score": node["score"]})
+                    else:
+                        txt = node.get("text", "")
+                        color = node.get("color", "")
+                        color_code = cls.COLOR_MAP.get(color) or cls.HEX_COLOR_MAP.get(color, "")
+                        bold_code = "§l" if node.get("bold") else ""
+                        italic_code = "§o" if node.get("italic") else ""
+                        formatted = f"{color_code}{bold_code}{italic_code}{txt}§r" if (color_code or bold_code or italic_code) else txt
+                        if formatted:
+                            rawtext_elements.append({"text": formatted})
+                    for extra in node.get("extra", []):
+                        process_node(extra)
+
+            process_node(parsed)
+            if rawtext_elements:
+                b_json = json.dumps({"rawtext": rawtext_elements}, ensure_ascii=False)
+                return f"{prefix}{b_json}"
+        except Exception:
+            pass
+        return line
+
+    @classmethod
+    def _convert_summon(cls, line: str, world_safe_name: str = "custom", known_npcs: set = None) -> str:
+        # 1. Idempotência em invocações /summon de NPCs customizados já mapeados
+        if known_npcs:
+            for npc in known_npcs:
+                if f":npc_{npc}" in line and not line.startswith("execute unless entity"):
+                    line = f"execute unless entity @e[type=namespace:npc_{npc}] run {line}"
+                    return line
+
+        m = re.search(r'^(.*?\bsummon\s+)([a-zA-Z0-9:_]+)\s+([~^0-9.-]+)\s+([~^0-9.-]+)\s+([~^0-9.-]+)(\s*\{.*\}|\s*)$', line)
+        if not m:
+            return line
+        prefix, ent, x, y, z, nbt = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5), m.group(6)
+        clean_ent = ent.replace("minecraft:", "")
+
+        custom_name = None
+        if nbt:
+            name_m = re.search(r'CustomName:\s*\'[^\']*?"text":"([^"]+)"', nbt)
+            if not name_m:
+                name_m = re.search(r'CustomName:[\'"]([^\'"]+)[\'"]', nbt)
+            if name_m:
+                custom_name = name_m.group(1)
+
+        # Se for um aldeão com nome customizado
+        if clean_ent == "villager" and custom_name:
+            slug = re.sub(r'[^a-zA-Z0-9_]', '_', custom_name.lower().replace("ö", "o")).strip('_')
+            target_ns = world_safe_name or "namespace"
+            npc_type = f"{target_ns}:npc_{slug}"
+            return f"execute unless entity @e[type={npc_type}] run {prefix}{npc_type} {x} {y} {z}"
+
+        # Se for mob customizado conhecido (Prometheus, Reaper, Ascended Pillager, etc.)
+        if custom_name and clean_ent in ("wither_skeleton", "spider", "pillager", "vex"):
+            mob_slug = re.sub(r'[^a-zA-Z0-9_]', '_', custom_name.lower()).strip('_')
+            if mob_slug in ("prometheus", "reaper", "ascended_pillager"):
+                target_ns = world_safe_name or "namespace"
+                custom_mob_type = f"{target_ns}:{mob_slug}"
+                return f"{prefix}{custom_mob_type} {x} {y} {z}"
+
+        # Invocação vanilla sem tags NBT
+        return f"{prefix}{clean_ent} {x} {y} {z}"
+
 
 
 class LootTableConverter:
@@ -441,7 +632,219 @@ class NPCTradeExtractor:
         return slug, display_name, profession, biome
 
 
+class BedrockLevelDBManager:
+    """Manipula e atualiza blocos de comando diretamente no banco LevelDB do Bedrock."""
+
+    @staticmethod
+    def read_varint(buf: bytes, pos: int) -> tuple:
+        res, shift = 0, 0
+        while True:
+            b = buf[pos]
+            pos += 1
+            res |= (b & 0x7f) << shift
+            shift += 7
+            if not (b & 0x80):
+                break
+        return res, pos
+
+    @staticmethod
+    def write_varint(val: int) -> bytes:
+        res = bytearray()
+        while val >= 0x80:
+            res.append((val & 0x7f) | 0x80)
+            val >>= 7
+        res.append(val)
+        return bytes(res)
+
+    @classmethod
+    def parse_handle(cls, buf: bytes, pos: int) -> tuple:
+        o, pos = cls.read_varint(buf, pos)
+        s, pos = cls.read_varint(buf, pos)
+        return o, s, pos
+
+    @classmethod
+    def parse_block_entries(cls, block_data: bytes) -> list:
+        num_restarts = struct.unpack('<I', block_data[-4:])[0]
+        restarts_offset = len(block_data) - 4 - num_restarts * 4
+        pos = 0
+        entries = []
+        last_key = b''
+        while pos < restarts_offset:
+            shared, pos = cls.read_varint(block_data, pos)
+            non_shared, pos = cls.read_varint(block_data, pos)
+            val_len, pos = cls.read_varint(block_data, pos)
+            key_delta = block_data[pos:pos+non_shared]
+            pos += non_shared
+            full_key = last_key[:shared] + key_delta
+            last_key = full_key
+            val = block_data[pos:pos+val_len]
+            pos += val_len
+            entries.append((full_key, val))
+        return entries
+
+    @classmethod
+    def build_block(cls, entries: list, restart_interval: int = 16) -> bytes:
+        data = bytearray()
+        restarts = []
+        last_key = b''
+        for i, (k, v) in enumerate(entries):
+            if i % restart_interval == 0:
+                shared = 0
+                restarts.append(len(data))
+            else:
+                shared = 0
+                while shared < len(last_key) and shared < len(k) and last_key[shared] == k[shared]:
+                    shared += 1
+            non_shared = len(k) - shared
+            key_delta = k[shared:]
+            data.extend(cls.write_varint(shared))
+            data.extend(cls.write_varint(non_shared))
+            data.extend(cls.write_varint(len(v)))
+            data.extend(key_delta)
+            data.extend(v)
+            last_key = k
+        for r in restarts:
+            data.extend(struct.pack('<I', r))
+        data.extend(struct.pack('<I', len(restarts)))
+        return bytes(data)
+
+    @staticmethod
+    def raw_compress(data: bytes) -> bytes:
+        co = zlib.compressobj(level=6, method=zlib.DEFLATED, wbits=-15)
+        return co.compress(data) + co.flush()
+
+    @classmethod
+    def read_ldb_all_entries(cls, raw: bytes) -> list:
+        footer = raw[-48:]
+        meta_off, meta_size, pos = cls.parse_handle(footer, 0)
+        idx_off, idx_size, pos = cls.parse_handle(footer, pos)
+        idx_data = raw[idx_off:idx_off + idx_size]
+        comp = raw[idx_off + idx_size]
+        if comp in (2, 4):
+            idx_data = zlib.decompress(idx_data, -15)
+
+        idx_entries = cls.parse_block_entries(idx_data)
+        all_data_blocks = []
+        for k, handle in idx_entries:
+            b_off, b_size, _ = cls.parse_handle(handle, 0)
+            b_raw = raw[b_off:b_off + b_size]
+            b_comp = raw[b_off + b_size]
+            if b_comp in (2, 4):
+                b_raw = zlib.decompress(b_raw, -15)
+            all_data_blocks.append(cls.parse_block_entries(b_raw))
+        return all_data_blocks
+
+    @classmethod
+    def build_ldb(cls, all_data_blocks: list) -> bytes:
+        out = bytearray()
+        idx_entries = []
+        for entries in all_data_blocks:
+            if not entries:
+                continue
+            uncomp = cls.build_block(entries)
+            comp = cls.raw_compress(uncomp)
+            b_off = len(out)
+            b_size = len(comp)
+            out.extend(comp)
+            out.append(4)  # Mojang raw deflate
+            crc = mask_crc(calc_crc32c(comp + b'\x04'))
+            out.extend(struct.pack('<I', crc))
+
+            last_key = entries[-1][0]
+            handle = cls.write_varint(b_off) + cls.write_varint(b_size)
+            idx_entries.append((last_key, bytes(handle)))
+
+        meta_block = cls.build_block([])
+        meta_off = len(out)
+        meta_size = len(meta_block)
+        out.extend(meta_block)
+        out.append(0)
+        crc_meta = mask_crc(calc_crc32c(meta_block + b'\x00'))
+        out.extend(struct.pack('<I', crc_meta))
+
+        idx_uncomp = cls.build_block(idx_entries)
+        idx_comp = cls.raw_compress(idx_uncomp)
+        idx_off = len(out)
+        idx_size = len(idx_comp)
+        out.extend(idx_comp)
+        out.append(4)
+        crc_idx = mask_crc(calc_crc32c(idx_comp + b'\x04'))
+        out.extend(struct.pack('<I', crc_idx))
+
+        # Footer 48 bytes
+        footer = bytearray()
+        footer.extend(cls.write_varint(meta_off))
+        footer.extend(cls.write_varint(meta_size))
+        footer.extend(cls.write_varint(idx_off))
+        footer.extend(cls.write_varint(idx_size))
+        footer.extend(b'\x00' * (40 - len(footer)))
+        footer.extend(b'\x57\xfb\x80\x8b\x24\x75\x47\xdb')
+        out.extend(footer)
+        return bytes(out)
+
+    @classmethod
+    def update_command_blocks(cls, db_dir: str, convert_func) -> int:
+        """Percorre todos os arquivos .ldb do banco LevelDB e atualiza blocos de comando."""
+        if not os.path.exists(db_dir):
+            return 0
+
+        ldb_files = [os.path.join(db_dir, f) for f in os.listdir(db_dir) if f.endswith(".ldb")]
+        total_modified = 0
+
+        for ldb_path in ldb_files:
+            try:
+                with open(ldb_path, "rb") as f:
+                    raw = f.read()
+
+                data_blocks = cls.read_ldb_all_entries(raw)
+                file_modified = False
+
+                new_data_blocks = []
+                for block_entries in data_blocks:
+                    new_entries = []
+                    for k, v in block_entries:
+                        if b"CommandBlock" in v:
+                            stream = io.BytesIO(v)
+                            out_stream = io.BytesIO()
+                            entry_modified = False
+
+                            while stream.tell() < len(v):
+                                try:
+                                    tag = nbtlib.File.from_fileobj(stream, byteorder="little")
+                                    if str(tag.get("id", "")) == "CommandBlock":
+                                        cmd = str(tag.get("Command", ""))
+                                        new_cmd = convert_func(cmd)
+                                        if new_cmd != cmd:
+                                            tag["Command"] = nbtlib.String(new_cmd)
+                                            entry_modified = True
+                                            total_modified += 1
+                                    tag.write(out_stream, byteorder="little")
+                                except Exception:
+                                    remaining = stream.read()
+                                    out_stream.write(remaining)
+                                    break
+
+                            if entry_modified:
+                                file_modified = True
+                                new_entries.append((k, out_stream.getvalue()))
+                            else:
+                                new_entries.append((k, v))
+                        else:
+                            new_entries.append((k, v))
+                    new_data_blocks.append(new_entries)
+
+                if file_modified:
+                    rebuilt_raw = cls.build_ldb(new_data_blocks)
+                    with open(ldb_path, "wb") as f:
+                        f.write(rebuilt_raw)
+            except Exception as e:
+                print(f"    [!] Aviso ao processar {os.path.basename(ldb_path)}: {e}")
+
+        return total_modified
+
+
 class MapConverterApp:
+
     """Orquestrador do processo completo de conversão e empacotamento para qualquer mapa."""
 
     def __init__(self, java_zip: str, bedrock_world: str, output_dir: str = "dist", packs_dir: str = "packs", world_name: str = None, keep_temp: bool = False):
@@ -486,23 +889,32 @@ class MapConverterApp:
             z.extractall(self.work_bedrock)
 
         # 4. Gerar Manifestos BP e RP com UUIDs estáveis
-        bp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.bp.header.1.26.40"))
-        bp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.bp.module.1.26.40"))
-        rp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.rp.header.1.26.40"))
-        rp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.rp.module.1.26.40"))
+        bp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.bp.header.1.20.0"))
+        bp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.bp.module.1.20.0"))
+        rp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.rp.header.1.20.0"))
+        rp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.rp.module.1.20.0"))
 
         self._build_manifests(bp_header_uuid, bp_module_uuid, rp_header_uuid, rp_module_uuid)
 
         # 5. Extrair e converter recursos do Java (Loot tables, Funções, Texturas, NPCs)
         self._convert_datapack_assets(auditor)
 
-        # 6. Gerar Funções Utilitárias de Inicialização
+        # 6. Atualizar e converter blocos de comando no banco LevelDB Bedrock
+        print("[*] Atualizando e convertendo blocos de comando no banco LevelDB Bedrock...")
+        db_path = os.path.join(self.work_bedrock, "db")
+        conv_cbs = BedrockLevelDBManager.update_command_blocks(
+            db_path,
+            lambda cmd: DatapackConverter.convert_command(cmd, self.known_npcs, self.safe_name)
+        )
+        print(f"    [OK] Total de blocos de comando convertidos no mundo: {conv_cbs}")
+
+        # 7. Gerar Funções Utilitárias de Inicialização
         self._generate_utility_functions()
 
-        # 7. Integrar Pacotes no mundo Bedrock
+        # 8. Integrar Pacotes no mundo Bedrock
         self._integrate_packs(bp_header_uuid, rp_header_uuid)
 
-        # 8. Empacotar .mcworld e .mcpack finais
+        # 9. Empacotar .mcworld e .mcpack finais
         final_mcworld = os.path.join(self.output_dir, f"{self.safe_name}-bedrock.mcworld")
         final_bp = os.path.join(self.output_dir, f"{self.safe_name}-behavior-pack.mcpack")
         final_rp = os.path.join(self.output_dir, f"{self.safe_name}-resource-pack.mcpack")
@@ -511,15 +923,15 @@ class MapConverterApp:
         self._package_zip(self.bp_dir, final_bp)
         self._package_zip(self.rp_dir, final_rp)
 
-        # 9. Atualizar SHA256SUMS.txt
+        # 10. Atualizar SHA256SUMS.txt
         sha_file = os.path.join(self.output_dir, "SHA256SUMS.txt")
         with open(sha_file, "w", encoding="utf-8") as f:
-            f.write(f"# Checksums SHA-256 dos entregaveis finais ({self.world_name} Bedrock 1.26.40)\n")
+            f.write(f"# Checksums SHA-256 dos entregaveis finais ({self.world_name} Bedrock 1.20+)\n")
             f.write(f"{sha256_file(final_mcworld)} *{os.path.basename(final_mcworld)}\n")
             f.write(f"{sha256_file(final_bp)} *{os.path.basename(final_bp)}\n")
             f.write(f"{sha256_file(final_rp)} *{os.path.basename(final_rp)}\n")
 
-        # 10. Limpar pasta temporária de trabalho
+        # 11. Limpar pasta temporária de trabalho
         if not self.keep_temp and os.path.exists(self.work_bedrock):
             shutil.rmtree(self.work_bedrock)
 
@@ -543,10 +955,10 @@ class MapConverterApp:
             "format_version": 2,
             "header": {
                 "name": f"{self.world_name} Behavior Pack",
-                "description": f"Behavior Pack for {self.world_name} (Bedrock 1.26.40+)",
+                "description": f"Behavior Pack for {self.world_name} (Bedrock 1.20+)",
                 "uuid": bp_h,
                 "version": [1, 0, 0],
-                "min_engine_version": [1, 26, 40]
+                "min_engine_version": [1, 20, 0]
             },
             "modules": [{"type": "data", "description": f"{self.world_name} BP Logic", "uuid": bp_m, "version": [1, 0, 0]}],
             "dependencies": [{"uuid": rp_h, "version": [1, 0, 0]}]
@@ -555,10 +967,10 @@ class MapConverterApp:
             "format_version": 2,
             "header": {
                 "name": f"{self.world_name} Resource Pack",
-                "description": f"Resource Pack for {self.world_name} (Bedrock 1.26.40+)",
+                "description": f"Resource Pack for {self.world_name} (Bedrock 1.20+)",
                 "uuid": rp_h,
                 "version": [1, 0, 0],
-                "min_engine_version": [1, 26, 40]
+                "min_engine_version": [1, 20, 0]
             },
             "modules": [{"type": "resources", "description": f"{self.world_name} RP Resources", "uuid": rp_m, "version": [1, 0, 0]}]
         }
@@ -597,6 +1009,52 @@ class MapConverterApp:
                     with open(os.path.join(tex_block_dir, t_basename), "wb") as f:
                         f.write(z.read(tf))
                     texture_data[t_key] = {"textures": f"textures/blocks/{t_key}"}
+
+                # Tratamento para variações de textura de blocos vanilla (ex: bedrock)
+                bedrock_bs = [n for n in namelist if n.endswith("blockstates/bedrock.json")]
+                bedrock_variations = []
+                if bedrock_bs:
+                    try:
+                        bs_data = json.loads(z.read(bedrock_bs[0]).decode("utf-8"))
+                        variant_list = bs_data.get("variants", {}).get("", [])
+                        if isinstance(variant_list, list):
+                            for v in variant_list:
+                                model = v.get("model", "")
+                                weight = v.get("weight", 1)
+                                m_idx = model.split("/")[-1]
+                                tex_path = f"textures/blocks/bedrock_{m_idx}"
+                                bedrock_variations.append({"path": tex_path, "weight": weight})
+                    except Exception as e:
+                        print(f"    [!] Aviso ao ler blockstate bedrock.json: {e}")
+
+                if not bedrock_variations:
+                    b_texs = [n for n in tex_files if re.search(r'bedrock_\d+\.png$', n)]
+                    if b_texs:
+                        for bt in sorted(b_texs):
+                            t_basename = os.path.basename(bt)
+                            t_key = os.path.splitext(t_basename)[0]
+                            bedrock_variations.append({"path": f"textures/blocks/{t_key}", "weight": 10})
+
+                if bedrock_variations:
+                    texture_data["bedrock"] = {
+                        "textures": {
+                            "variations": bedrock_variations
+                        }
+                    }
+                    b0_path = os.path.join(tex_block_dir, "bedrock_0.png")
+                    b_fallback = os.path.join(tex_block_dir, "bedrock.png")
+                    if os.path.exists(b0_path) and not os.path.exists(b_fallback):
+                        shutil.copyfile(b0_path, b_fallback)
+
+                    blocks_def = {
+                        "format_version": [1, 1, 0],
+                        "bedrock": {
+                            "sound": "stone",
+                            "textures": "bedrock"
+                        }
+                    }
+                    with open(os.path.join(self.rp_dir, "blocks.json"), "w", encoding="utf-8") as f:
+                        json.dump(blocks_def, f, indent=2)
 
                 terrain_texture = {
                     "resource_pack_name": f"{self.safe_name}_rp",
@@ -644,7 +1102,7 @@ class MapConverterApp:
                                 if trades:
                                     self._create_npc_files(slug, disp_n, prof_n, biome_n, trades)
 
-                    conv_lines = [DatapackConverter.convert_command(l, self.known_npcs) for l in raw_lines]
+                    conv_lines = [DatapackConverter.convert_command(l, self.known_npcs, self.safe_name) for l in raw_lines]
                     with open(dest_path, "w", encoding="utf-8") as f:
                         f.write("\n".join(conv_lines) + "\n")
                 except Exception as e:
@@ -735,8 +1193,8 @@ class MapConverterApp:
 
         # Função de inicialização
         init_lines = [
-            f"# {self.world_name} Initialization for Bedrock 1.26.40+",
-            f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.26.40!"}}]}}'
+            f"# {self.world_name} Initialization for Bedrock 1.20+",
+            f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.20+!"}}]}}'
         ]
         with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(init_lines) + "\n")

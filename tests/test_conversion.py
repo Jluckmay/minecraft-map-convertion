@@ -5,6 +5,7 @@ Minecraft Map Converter & Bridge Tool: Java <-> Bedrock (1.26.40+)
 Autor: João Lucas Mayrinck
 """
 
+import io
 import os
 import sys
 import json
@@ -167,7 +168,7 @@ class TestUniversalMapConverter(unittest.TestCase):
             with open(bp_man_path, "r", encoding="utf-8") as f:
                 bp_data = json.load(f)
                 self.assertEqual(bp_data["format_version"], 2)
-                self.assertEqual(bp_data["header"]["min_engine_version"], [1, 26, 40])
+                self.assertEqual(bp_data["header"]["min_engine_version"], [1, 20, 0])
 
             # Valida trade table gerada para Alex
             trade_path = os.path.join(packs_dir, "testadventure_bp", "trading", "alex_trades.json")
@@ -177,6 +178,121 @@ class TestUniversalMapConverter(unittest.TestCase):
                 self.assertEqual(t_data["tiers"][0]["trades"][0]["wants"][0]["item"], "stick")
                 self.assertEqual(t_data["tiers"][0]["trades"][0]["gives"][0]["item"], "emerald")
 
+    def test_08_distance_selector_and_functions(self):
+        """Testa tradução de seletores distance= para r= e funções com namespace."""
+        cmd1 = "/execute if entity @p[distance=..50] run function custom:open_doors_1"
+        conv1 = DatapackConverter.convert_command(cmd1)
+        self.assertIn("@p[r=50]", conv1)
+        self.assertIn("function custom/open_doors_1", conv1)
+        self.assertFalse(conv1.startswith("/"))
+
+        cmd2 = "effect give @a[distance=5..20] speed 10 1"
+        conv2 = DatapackConverter.convert_command(cmd2)
+        self.assertIn("@a[rm=5,r=20]", conv2)
+
+    def test_09_bedrock_texture_variations_and_blocks_json(self):
+        """Testa geração de variações no terrain_texture.json e blocks.json para bedrock."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            java_zip = os.path.join(tmp_dir, "test_bs.zip")
+            bedrock_mcworld = os.path.join(tmp_dir, "test_b.mcworld")
+            out_dir = os.path.join(tmp_dir, "dist")
+            packs_dir = os.path.join(tmp_dir, "packs")
+
+            with zipfile.ZipFile(java_zip, "w") as z:
+                # Mock blockstate bedrock.json
+                bs_content = json.dumps({
+                    "variants": {
+                        "": [
+                            {"model": "block/bedrock/0", "weight": 40},
+                            {"model": "block/bedrock/1", "weight": 20}
+                        ]
+                    }
+                })
+                z.writestr("resources/assets/minecraft/blockstates/bedrock.json", bs_content)
+                z.writestr("resources/assets/minecraft/textures/block/bedrock_0.png", b"PNG0")
+                z.writestr("resources/assets/minecraft/textures/block/bedrock_1.png", b"PNG1")
+
+            with zipfile.ZipFile(bedrock_mcworld, "w") as z:
+                z.writestr("db/CURRENT", "CURRENT")
+                z.writestr("level.dat", b"LEVEL")
+
+            app = MapConverterApp(java_zip, bedrock_mcworld, out_dir, packs_dir, "BrickWorld", False)
+            app.run()
+
+            # Valida terrain_texture.json
+            tt_path = os.path.join(packs_dir, "brickworld_rp", "textures", "terrain_texture.json")
+            self.assertTrue(os.path.exists(tt_path))
+            with open(tt_path, "r", encoding="utf-8") as f:
+                tt = json.load(f)
+                self.assertIn("bedrock", tt["texture_data"])
+                variations = tt["texture_data"]["bedrock"]["textures"]["variations"]
+                self.assertEqual(len(variations), 2)
+                self.assertEqual(variations[0]["weight"], 40)
+                self.assertEqual(variations[1]["weight"], 20)
+
+            # Valida blocks.json
+            blocks_path = os.path.join(packs_dir, "brickworld_rp", "blocks.json")
+            self.assertTrue(os.path.exists(blocks_path))
+            with open(blocks_path, "r", encoding="utf-8") as f:
+                b_data = json.load(f)
+                self.assertEqual(b_data["bedrock"]["textures"], "bedrock")
+
+            # Valida fallback bedrock.png
+            fallback_png = os.path.join(packs_dir, "brickworld_rp", "textures", "blocks", "bedrock.png")
+            self.assertTrue(os.path.exists(fallback_png))
+
+    def test_10_leveldb_command_block_update(self):
+        """Testa o BedrockLevelDBManager lendo, modificando e salvando blocos LevelDB."""
+        from map_converter import BedrockLevelDBManager
+        import nbtlib
+
+        # Cria mock de registro NBT com CommandBlock
+        cb_tag = nbtlib.Compound({
+            "id": nbtlib.String("CommandBlock"),
+            "x": nbtlib.Int(100),
+            "y": nbtlib.Int(65),
+            "z": nbtlib.Int(-200),
+            "Command": nbtlib.String("/execute if entity @p[distance=..50] run function custom:open_doors_1"),
+            "CustomName": nbtlib.String("@"),
+            "ExecuteOnFirstTick": nbtlib.Byte(0),
+            "auto": nbtlib.Byte(0)
+        })
+        nbt_file = nbtlib.File(cb_tag)
+        nbt_buf = io.BytesIO()
+        nbt_file.write(nbt_buf, byteorder="little")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_dir = os.path.join(tmp_dir, "db")
+            os.makedirs(db_dir)
+
+            # Constrói um arquivo .ldb sintético
+            chunk_key = b"\x00\x00\x00\x00\x00\x00\x00\x001"
+            entries = [(chunk_key, nbt_buf.getvalue())]
+            data_blocks = [entries]
+            ldb_bytes = BedrockLevelDBManager.build_ldb(data_blocks)
+            ldb_path = os.path.join(db_dir, "000001.ldb")
+            with open(ldb_path, "wb") as f:
+                f.write(ldb_bytes)
+
+            # Executa atualização
+            count = BedrockLevelDBManager.update_command_blocks(
+                db_dir,
+                lambda cmd: DatapackConverter.convert_command(cmd, set(), "custom")
+            )
+            self.assertEqual(count, 1)
+
+            # Lê de volta e valida comando convertido
+            with open(ldb_path, "rb") as f:
+                updated_raw = f.read()
+            read_blocks = BedrockLevelDBManager.read_ldb_all_entries(updated_raw)
+            updated_chunk_val = read_blocks[0][0][1]
+            updated_tag = nbtlib.File.from_fileobj(io.BytesIO(updated_chunk_val), byteorder="little")
+            updated_cmd = str(updated_tag["Command"])
+            self.assertIn("@p[r=50]", updated_cmd)
+            self.assertIn("function custom/open_doors_1", updated_cmd)
+            self.assertFalse(updated_cmd.startswith("/"))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
