@@ -19,6 +19,11 @@ _backups/
 inputs/*.zip
 inputs/*.mcworld
 input/
+!inputs/README.md
+!inputs/.gitkeep
+expected/*
+!expected/README.md
+!expected/.gitkeep
 extracted/
 output/*
 !output/.gitkeep

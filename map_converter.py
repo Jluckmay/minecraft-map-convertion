@@ -1289,7 +1289,7 @@ class MapConverterApp:
                     z.write(full_p, rel_p)
 
 
-def auto_discover_file(arg_val: str, extensions: tuple, search_dirs=("inputs", ".")) -> str:
+def auto_discover_file(arg_val: str, extensions: tuple, search_dirs=("inputs", "expected", ".")) -> str:
     """Resolve o arquivo a partir de argumento ou busca automática nos diretórios informados."""
     if arg_val and os.path.exists(arg_val):
         return arg_val

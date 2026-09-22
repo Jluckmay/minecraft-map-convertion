@@ -19,14 +19,23 @@ def extract_archives(java_zip_path: str, resources_zip_path: str, ext_world: str
     print(f"    [OK] Mundo Java extraído com sucesso.")
 
     if os.path.exists(resources_zip_path):
+    if resources_zip_path and os.path.exists(resources_zip_path):
         print(f"[*] Extraindo Resource Pack de: {resources_zip_path} para {ext_rp}...")
         with zipfile.ZipFile(resources_zip_path, "r") as z:
             z.extractall(ext_rp)
         print(f"    [OK] Resource Pack extraído com sucesso.")
     else:
         # Fallback se resources estiver dentro de extracted/java_world/resources
+        # Fallback 1: resources.zip embutido no mundo Java
+        embedded_zip = os.path.join(ext_world, "resources.zip")
         embedded_rp = os.path.join(ext_world, "resources")
         if os.path.isdir(embedded_rp):
+        if os.path.exists(embedded_zip):
+            print(f"[*] Extraindo Resource Pack embutido ({embedded_zip}) para {ext_rp}...")
+            with zipfile.ZipFile(embedded_zip, "r") as z:
+                z.extractall(ext_rp)
+            print(f"    [OK] Resource Pack embutido extraído com sucesso.")
+        elif os.path.isdir(embedded_rp):
             print(f"[*] Copiando Resource Pack interno de {embedded_rp} para {ext_rp}...")
             import shutil
             shutil.copytree(embedded_rp, ext_rp, dirs_exist_ok=True)
@@ -149,12 +158,35 @@ def scan_dimensions(world_dir: str) -> dict:
 def main():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     input_java = os.path.join(base_dir, "input", "java-version.zip")
+    inputs_dir = os.path.join(base_dir, "inputs")
+    expected_dir = os.path.join(base_dir, "expected")
+
+    # Localiza o arquivo .zip do mundo Java em inputs/
+    input_java = os.path.join(inputs_dir, "java-version.zip")
+    if not os.path.exists(input_java) and os.path.isdir(inputs_dir):
+        zips = [os.path.join(inputs_dir, f) for f in os.listdir(inputs_dir) if f.endswith(".zip")]
+        if zips:
+            input_java = zips[0]
+
     if not os.path.exists(input_java):
         input_java = os.path.join(base_dir, "inputs", "java-version.zip")
     
     input_rp = os.path.join(base_dir, "input", "resources.zip")
     if not os.path.exists(input_rp):
         input_rp = os.path.join(base_dir, "inputs", "maze-runner-resource-pack.mcpack")
+        print(f"[ERRO] Arquivo Java (.zip) não encontrado em {inputs_dir}")
+        sys.exit(1)
+
+    # Localiza Resource Pack externo opcional (se ausente, extrai o embutido no mundo Java)
+    input_rp = ""
+    for candidate in [
+        os.path.join(inputs_dir, "resources.zip"),
+        os.path.join(expected_dir, "resources.zip"),
+        os.path.join(expected_dir, "maze-runner-resource-pack.mcpack")
+    ]:
+        if os.path.exists(candidate):
+            input_rp = candidate
+            break
 
     ext_world = os.path.join(base_dir, "extracted", "java_world")
     ext_rp = os.path.join(base_dir, "extracted", "java_resource_pack")

@@ -64,12 +64,23 @@ def main():
 
     # 3. Fase 9: Conversão do Mundo Bedrock (LevelDB Injection)
     print("\n[*] [FASE 9] Preparando e Atualizando Mundo Bedrock em:", target_world)
-    base_bedrock = os.path.join(BASE_DIR, "input", "bedrock-version.mcworld")
-    if not os.path.exists(base_bedrock):
-        base_bedrock = os.path.join(BASE_DIR, "inputs", "bedrock-version.mcworld")
+    inputs_dir = os.path.join(BASE_DIR, "inputs")
+    expected_dir = os.path.join(BASE_DIR, "expected")
+    # Localiza a base Bedrock: 1. inputs/*.mcworld, 2. expected/*.mcworld
+    base_bedrock = ""
+    candidates = []
+    if os.path.isdir(inputs_dir):
+        candidates.extend([os.path.join(inputs_dir, f) for f in os.listdir(inputs_dir) if f.endswith(".mcworld")])
+    if os.path.isdir(expected_dir):
+        candidates.extend([os.path.join(expected_dir, f) for f in os.listdir(expected_dir) if f.endswith(".mcworld")])
 
-    if not os.path.exists(base_bedrock):
-        print(f"[ERRO] Base Bedrock não encontrada em inputs/bedrock-version.mcworld")
+    for c in candidates:
+        if os.path.exists(c):
+            base_bedrock = c
+            break
+
+    if not base_bedrock or not os.path.exists(base_bedrock):
+        print(f"[ERRO] Base Bedrock não encontrada em inputs/ ou expected/")
         sys.exit(1)
 
     if os.path.exists(target_world):
