@@ -293,7 +293,6 @@ class DatapackConverter:
         s = s.replace("in minecraft:overworld", "in overworld")
         s = s.replace("in minecraft:the_nether", "in nether")
         s = s.replace("in minecraft:the_end", "in the_end")
-        s = s.replace("run execute in ", "in ")
 
         # 6. tp sem alvo dentro de execute: run tp <x> <y> <z> -> run tp @s <x> <y> <z>
         s = re.sub(r'\brun tp (-?[0-9~^.]+) (-?[0-9~^.]+) (-?[0-9~^.]+)', r'run tp @s \1 \2 \3', s)
@@ -896,6 +895,13 @@ class MapConverterApp:
 
         self.bp_dir = os.path.join(self.packs_dir, f"{self.safe_name}_bp")
         self.rp_dir = os.path.join(self.packs_dir, f"{self.safe_name}_rp")
+        # Rebuild packs from a clean directory. Otherwise files removed or
+        # relocated by a converter update (such as the old root tick.json)
+        # remain in the .mcpack and can shadow the corrected structure.
+        if os.path.exists(self.bp_dir):
+            shutil.rmtree(self.bp_dir)
+        if os.path.exists(self.rp_dir):
+            shutil.rmtree(self.rp_dir)
         os.makedirs(self.bp_dir, exist_ok=True)
         os.makedirs(self.rp_dir, exist_ok=True)
 
@@ -905,6 +911,10 @@ class MapConverterApp:
             shutil.rmtree(self.work_bedrock)
         with zipfile.ZipFile(self.bedrock_world, "r") as z:
             z.extractall(self.work_bedrock)
+
+        # Chunker worlds can retain commands disabled even when the source
+        # Java world relies on command blocks and functions.
+        self._enable_commands_in_world()
 
         # 4. Gerar Manifestos BP e RP com UUIDs estáveis
         bp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{self.safe_name}.bp.header.1.20.0"))
@@ -1029,55 +1039,37 @@ class MapConverterApp:
                     texture_data[t_key] = {"textures": f"textures/blocks/{t_key}"}
 
                 # Tratamento para variações de textura de blocos vanilla (ex: bedrock)
-                bedrock_bs = [n for n in namelist if n.endswith("blockstates/bedrock.json")]
-                bedrock_variations = []
-                if bedrock_bs:
-                    try:
-                        bs_data = json.loads(z.read(bedrock_bs[0]).decode("utf-8"))
-                        variant_list = bs_data.get("variants", {}).get("", [])
-                        if isinstance(variant_list, list):
-                            for v in variant_list:
-                                model = v.get("model", "")
-                                weight = v.get("weight", 1)
-                                m_idx = model.split("/")[-1]
-                                tex_path = f"textures/blocks/bedrock_{m_idx}"
-                                bedrock_variations.append({"path": tex_path, "weight": weight})
-                    except Exception as e:
-                        print(f"    [!] Aviso ao ler blockstate bedrock.json: {e}")
+                # Bedrock's terrain atlas does not support Java's weighted
+                # blockstate-variation object. Use one valid atlas alias and
+                # the canonical vanilla texture path instead. The supplied
+                # map's brick face is bedrock_3; names containing "brick"
+                # take precedence for future maps.
+                texture_keys = {os.path.splitext(os.path.basename(p))[0] for p in tex_files}
+                brick_key = next((k for k in sorted(texture_keys) if "bedrock" in k and "brick" in k), None)
+                bedrock_texture_key = brick_key or ("bedrock" if "bedrock" in texture_keys else None)
+                if not bedrock_texture_key:
+                    bedrock_texture_key = "bedrock_3" if "bedrock_3" in texture_keys else None
+                if not bedrock_texture_key:
+                    numbered = sorted(k for k in texture_keys if re.fullmatch(r"bedrock_\d+", k))
+                    bedrock_texture_key = numbered[0] if numbered else None
 
-                if not bedrock_variations:
-                    b_texs = [n for n in tex_files if re.search(r'bedrock_\d+\.png$', n)]
-                    if b_texs:
-                        for bt in sorted(b_texs):
-                            t_basename = os.path.basename(bt)
-                            t_key = os.path.splitext(t_basename)[0]
-                            bedrock_variations.append({"path": f"textures/blocks/{t_key}", "weight": 10})
-
-                if bedrock_variations:
-                    texture_data["bedrock"] = {
-                        "textures": {
-                            "variations": bedrock_variations
-                        }
-                    }
-                    texture_data["minecraft_bedrock"] = texture_data["bedrock"]
-                    b0_path = os.path.join(tex_block_dir, "bedrock_0.png")
-                    b_fallback = os.path.join(tex_block_dir, "bedrock.png")
-                    if os.path.exists(b0_path) and not os.path.exists(b_fallback):
-                        shutil.copyfile(b0_path, b_fallback)
+                if bedrock_texture_key:
+                    source_texture = os.path.join(tex_block_dir, f"{bedrock_texture_key}.png")
+                    canonical_texture = os.path.join(tex_block_dir, "bedrock.png")
+                    if os.path.abspath(source_texture) != os.path.abspath(canonical_texture):
+                        shutil.copyfile(source_texture, canonical_texture)
+                    texture_data["bedrock"] = {"textures": "textures/blocks/bedrock"}
 
                     blocks_def = {
-                        "format_version": [1, 1, 0],
-                        "bedrock": {
-                            "sound": "stone",
-                            "textures": "bedrock"
-                        },
+                        "format_version": "1.19.30",
                         "minecraft:bedrock": {
                             "sound": "stone",
-                            "textures": "minecraft_bedrock"
+                            "textures": "bedrock"
                         }
                     }
                     with open(os.path.join(self.rp_dir, "blocks.json"), "w", encoding="utf-8") as f:
                         json.dump(blocks_def, f, indent=2)
+                    print(f"    [OK] Textura de tijolos aplicada ao bedrock: {bedrock_texture_key}.png")
 
                 terrain_texture = {
                     "resource_pack_name": f"{self.safe_name}_rp",
@@ -1226,12 +1218,13 @@ class MapConverterApp:
             f.write("\n".join(init_lines) + "\n")
 
         tick_lines = [
-            f"scoreboard objectives add {self.safe_name}_initialized dummy",
             f"execute unless score #world {self.safe_name}_initialized matches 1 run function {self.safe_name}/init_world"
         ]
         with open(os.path.join(self.bp_dir, "functions", "tick.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(tick_lines) + "\n")
-        with open(os.path.join(self.bp_dir, "tick.json"), "w", encoding="utf-8") as f:
+        # Bedrock discovers tick.json only inside functions/, beside the
+        # functions it invokes. A root-level tick.json is silently ignored.
+        with open(os.path.join(self.bp_dir, "functions", "tick.json"), "w", encoding="utf-8") as f:
             json.dump({"values": ["tick"]}, f, indent=2)
 
         # Função de kit inicial
@@ -1244,6 +1237,31 @@ class MapConverterApp:
         ]
         with open(os.path.join(func_dir, "starter_kit.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(kit_lines) + "\n")
+
+    def _enable_commands_in_world(self):
+        """Enable Bedrock commands while preserving level.dat's header and NBT."""
+        level_path = os.path.join(self.work_bedrock, "level.dat")
+        if not os.path.exists(level_path):
+            return
+        try:
+            with open(level_path, "rb") as f:
+                raw = f.read()
+            # Bedrock level.dat has an 8-byte storage-version header before NBT.
+            if len(raw) < 8:
+                raise ValueError("level.dat is smaller than its Bedrock header")
+            tag = nbtlib.File.parse(io.BytesIO(raw[8:]), byteorder="little")
+            tag["commandsEnabled"] = nbtlib.Byte(1)
+            tag["cheatsEnabled"] = nbtlib.Byte(1)
+            payload = io.BytesIO()
+            tag.write(payload, byteorder="little")
+            with open(level_path, "wb") as f:
+                f.write(raw[:8])
+                f.write(payload.getvalue())
+            print("    [OK] Comandos e command blocks habilitados no level.dat")
+        except Exception as e:
+            # Synthetic/minimal worlds may have a placeholder level.dat. Do
+            # not abort export in that case; a real world still gets updated.
+            print(f"    [!] Aviso ao habilitar comandos em level.dat: {e}")
 
     def _integrate_packs(self, bp_h: str, rp_h: str):
         print("[*] Integrando Behavior Pack e Resource Pack no mundo Bedrock...")

@@ -190,13 +190,28 @@ class TestUniversalMapConverter(unittest.TestCase):
         conv2 = DatapackConverter.convert_command(cmd2)
         self.assertIn("@a[rm=5,r=20]", conv2)
 
-    def test_09_bedrock_texture_variations_and_blocks_json(self):
+        # An outer execute must retain the nested execute after namespace
+        # conversion; dropping it produces invalid Bedrock command syntax.
+        cmd3 = "execute unless entity @e[type=custom:npc] run execute in minecraft:overworld run summon custom:npc 0 64 0"
+        conv3 = DatapackConverter.convert_command(cmd3)
+        self.assertEqual(
+            conv3,
+            "execute unless entity @e[type=custom:npc] run execute in overworld run summon custom:npc 0 64 0"
+        )
+
+    def test_09_bedrock_texture_override_and_blocks_json(self):
         """Testa geração de variações no terrain_texture.json e blocks.json para bedrock."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             java_zip = os.path.join(tmp_dir, "test_bs.zip")
             bedrock_mcworld = os.path.join(tmp_dir, "test_b.mcworld")
             out_dir = os.path.join(tmp_dir, "dist")
             packs_dir = os.path.join(tmp_dir, "packs")
+
+            # A rerun must not retain the legacy root-level tick.json.
+            stale_tick = os.path.join(packs_dir, "brickworld_bp", "tick.json")
+            os.makedirs(os.path.dirname(stale_tick))
+            with open(stale_tick, "w", encoding="utf-8") as f:
+                f.write('{"values": ["legacy"]}')
 
             with zipfile.ZipFile(java_zip, "w") as z:
                 # Mock blockstate bedrock.json
@@ -225,21 +240,28 @@ class TestUniversalMapConverter(unittest.TestCase):
             with open(tt_path, "r", encoding="utf-8") as f:
                 tt = json.load(f)
                 self.assertIn("bedrock", tt["texture_data"])
-                variations = tt["texture_data"]["bedrock"]["textures"]["variations"]
-                self.assertEqual(len(variations), 2)
-                self.assertEqual(variations[0]["weight"], 40)
-                self.assertEqual(variations[1]["weight"], 20)
+                self.assertEqual(
+                    tt["texture_data"]["bedrock"]["textures"],
+                    "textures/blocks/bedrock"
+                )
 
             # Valida blocks.json
             blocks_path = os.path.join(packs_dir, "brickworld_rp", "blocks.json")
             self.assertTrue(os.path.exists(blocks_path))
             with open(blocks_path, "r", encoding="utf-8") as f:
                 b_data = json.load(f)
-                self.assertEqual(b_data["bedrock"]["textures"], "bedrock")
+                self.assertEqual(b_data["format_version"], "1.19.30")
+                self.assertEqual(b_data["minecraft:bedrock"]["textures"], "bedrock")
 
             # Valida fallback bedrock.png
             fallback_png = os.path.join(packs_dir, "brickworld_rp", "textures", "blocks", "bedrock.png")
             self.assertTrue(os.path.exists(fallback_png))
+            with open(fallback_png, "rb") as f:
+                self.assertEqual(f.read(), b"PNG0")
+
+            # tick.json must live beside the functions it invokes.
+            self.assertTrue(os.path.exists(os.path.join(packs_dir, "brickworld_bp", "functions", "tick.json")))
+            self.assertFalse(os.path.exists(os.path.join(packs_dir, "brickworld_bp", "tick.json")))
 
     def test_10_leveldb_command_block_update(self):
         """Testa o BedrockLevelDBManager lendo, modificando e salvando blocos LevelDB."""
@@ -295,4 +317,3 @@ class TestUniversalMapConverter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
-
