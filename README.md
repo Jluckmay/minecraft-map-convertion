@@ -69,7 +69,7 @@ pip install -r requirements.txt
 python map_converter.py --help
 
 # Run with custom input worlds
-python map_converter.py --java inputs/my_world.zip --bedrock inputs/my_world_chunker.mcworld --output dist/
+python map_converter.py --java inputs/my_world.zip --bedrock inputs/my_world_chunker.mcworld --output output/
 
 # Run automated test suite
 python tests/test_conversion.py
@@ -78,7 +78,7 @@ python tests/test_conversion.py
 #### CLI Arguments:
 - `--java`: Path to the Java world ZIP archive.
 - `--bedrock`: Path to the initial Bedrock `.mcworld` converted by Chunker.
-- `--output`: Output directory for generated deliverables (`.mcworld`, `.mcpack`, `SHA256SUMS.txt`) [Default: `dist`].
+- `--output`: Output directory for generated deliverables (`.mcworld`, `.mcaddon`, `.mcpack`, `SHA256SUMS.txt`) [Default: `output`].
 - `--packs`: Output directory for unpacked Behavior and Resource Packs [Default: `packs`].
 - `--name`: Custom name for the generated world and packs (Default: auto-detected from `level.dat`).
 - `--keep-temp`: Preserves intermediate temporary world extraction directory.

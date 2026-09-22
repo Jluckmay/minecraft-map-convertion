@@ -864,7 +864,7 @@ class MapConverterApp:
 
     """Orquestrador do processo completo de conversão e empacotamento para qualquer mapa."""
 
-    def __init__(self, java_zip: str, bedrock_world: str, output_dir: str = "dist", packs_dir: str = "packs", world_name: str = None, keep_temp: bool = False):
+    def __init__(self, java_zip: str, bedrock_world: str, output_dir: str = "output", packs_dir: str = "packs", world_name: str = None, keep_temp: bool = False):
         self.java_zip = java_zip
         self.bedrock_world = bedrock_world
         self.output_dir = output_dir
@@ -954,20 +954,23 @@ class MapConverterApp:
         # 8. Integrar Pacotes no mundo Bedrock
         self._integrate_packs(bp_header_uuid, rp_header_uuid)
 
-        # 9. Empacotar .mcworld e .mcpack finais
+        # 9. Empacotar .mcworld, .mcaddon e .mcpack finais
         final_mcworld = os.path.join(self.output_dir, f"{self.safe_name}-bedrock.mcworld")
         final_bp = os.path.join(self.output_dir, f"{self.safe_name}-behavior-pack.mcpack")
         final_rp = os.path.join(self.output_dir, f"{self.safe_name}-resource-pack.mcpack")
+        final_addon = os.path.join(self.output_dir, f"{self.safe_name}.mcaddon")
 
         self._package_zip(self.work_bedrock, final_mcworld)
         self._package_zip(self.bp_dir, final_bp)
         self._package_zip(self.rp_dir, final_rp)
+        self._package_mcaddon(self.bp_dir, self.rp_dir, final_addon)
 
         # 10. Atualizar SHA256SUMS.txt
         sha_file = os.path.join(self.output_dir, "SHA256SUMS.txt")
         with open(sha_file, "w", encoding="utf-8") as f:
             f.write(f"# Checksums SHA-256 dos entregaveis finais ({self.world_name} Bedrock 1.20+)\n")
             f.write(f"{sha256_file(final_mcworld)} *{os.path.basename(final_mcworld)}\n")
+            f.write(f"{sha256_file(final_addon)} *{os.path.basename(final_addon)}\n")
             f.write(f"{sha256_file(final_bp)} *{os.path.basename(final_bp)}\n")
             f.write(f"{sha256_file(final_rp)} *{os.path.basename(final_rp)}\n")
 
@@ -1300,6 +1303,19 @@ class MapConverterApp:
                     rel_p = os.path.relpath(full_p, source_dir).replace("\\", "/")
                     z.write(full_p, rel_p)
 
+    def _package_mcaddon(self, bp_dir: str, rp_dir: str, target_addon: str):
+        with zipfile.ZipFile(target_addon, "w", zipfile.ZIP_DEFLATED) as z:
+            for root, _, files in os.walk(bp_dir):
+                for file in files:
+                    full_p = os.path.join(root, file)
+                    rel_p = "behavior_pack/" + os.path.relpath(full_p, bp_dir).replace("\\", "/")
+                    z.write(full_p, rel_p)
+            for root, _, files in os.walk(rp_dir):
+                for file in files:
+                    full_p = os.path.join(root, file)
+                    rel_p = "resource_pack/" + os.path.relpath(full_p, rp_dir).replace("\\", "/")
+                    z.write(full_p, rel_p)
+
 
 def auto_discover_file(arg_val: str, extensions: tuple, search_dirs=("inputs", "expected", ".")) -> str:
     """Resolve o arquivo a partir de argumento ou busca automática nos diretórios informados."""
@@ -1319,7 +1335,7 @@ def main():
     )
     parser.add_argument("--java", default=None, help="Caminho do ZIP do mundo Java (busca automática em inputs/*.zip)")
     parser.add_argument("--bedrock", default=None, help="Caminho do MCWORLD Bedrock inicial do Chunker (busca automática em inputs/*.mcworld)")
-    parser.add_argument("--output", default="dist", help="Diretório de saída dos artefatos (.mcworld, .mcpack) [padrão: dist]")
+    parser.add_argument("--output", default="output", help="Diretório de saída dos artefatos (.mcworld, .mcpack, .mcaddon) [padrão: output]")
     parser.add_argument("--packs", default="packs", help="Diretório dos pacotes descompactados BP/RP [padrão: packs]")
     parser.add_argument("--name", default=None, help="Nome do mundo/pacote (padrão: auto-detectado do level.dat)")
     parser.add_argument("--keep-temp", action="store_true", help="Preservar diretório temporário de extração (work_bedrock)")

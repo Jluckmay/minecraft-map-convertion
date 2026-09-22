@@ -28,11 +28,8 @@ expected/*
 extracted/
 output/*
 !output/.gitkeep
-!inputs/README.md
 
-# Build output directories (generated locally by map_converter.py)
-dist/*
-!dist/.gitkeep
+# Temporary packs directory
 packs/*
 !packs/.gitkeep
 

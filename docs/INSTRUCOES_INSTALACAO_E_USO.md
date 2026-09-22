@@ -14,14 +14,13 @@ Este guia prático e detalhado orienta como instalar, importar, ativar e jogar q
 
 ---
 
-### 1. Arquivos Gerados e Entregáveis
+### 1. Arquivos Gerados e Entregáveis (Diretório `output/`)
 
-O projeto disponibiliza os entregáveis em duas estruturas, dependendo do modo de execução utilizado:
+Todos os pacotes finais gerados pelo conversor são centralizados exclusivamente no diretório [`output/`](file:///c:/Users/jluck/OneDrive/Pictures/Documentos/codes/Github/Originais/map-convertion/output/):
 
-#### Modo A: Pipeline Modular de 12 Fases (Diretório `output/`)
-1. **`converted_map.mcworld`** (Recomendado):
+1. **`converted_map.mcworld`** (ou `<nome_do_mundo>-bedrock.mcworld`) (Recomendado):
    - Pacote completo tudo-em-um contendo o terreno LevelDB, blocos de comando convertidos, baús preservados e os pacotes de comportamento e recursos já embutidos e ativados.
-2. **`converted_map.mcaddon`**:
+2. **`converted_map.mcaddon`** (ou `<nome_do_mundo>.mcaddon`):
    - Pacote unificado contendo o Behavior Pack e o Resource Pack juntos, ideal para adicionar as mecânicas e texturas a mundos Bedrock existentes.
 3. **`converted_behavior_pack.mcpack`**:
    - Pacote de Comportamento avulso (funções `.mcfunction`, entidades e NPCs customizados, tabelas de comércio e loot tables).
@@ -29,12 +28,6 @@ O projeto disponibiliza os entregáveis em duas estruturas, dependendo do modo d
    - Pacote de Recursos avulso (texturas de tijolos na bedrock com variações ponderadas, terracota e áudios).
 5. **`SHA256SUMS.txt`**:
    - Assinaturas de integridade e verificação criptográfica SHA-256 de todos os arquivos gerados.
-
-#### Modo B: CLI Automatizado `map_converter.py` (Diretório `dist/`)
-1. **`<nome_do_mundo>-bedrock.mcworld`**: Arquivo de mundo pronto para importação direta.
-2. **`<nome_do_mundo>-behavior-pack.mcpack`**: Pacote de comportamento avulso.
-3. **`<nome_do_mundo>-resource-pack.mcpack`**: Pacote de recursos avulso.
-4. **`SHA256SUMS.txt`**: Checksums SHA-256 dos artefatos produzidos.
 
 ---
 
@@ -115,7 +108,7 @@ O iOS possui integração nativa com extensões do Minecraft:
 ### 4. Como Instalar no Computador (Windows 10/11 e macOS)
 
 #### Opção A: Importação Direta do Mundo (Recomendada)
-1. Dê um duplo-clique no arquivo `.mcworld` (seja em `output/converted_map.mcworld` ou em `dist/<nome>-bedrock.mcworld`).
+1. Dê um duplo-clique no arquivo `.mcworld` gerado na pasta [`output/`](file:///c:/Users/jluck/OneDrive/Pictures/Documentos/codes/Github/Originais/map-convertion/output/) (ex: `output/converted_map.mcworld`).
 2. O Minecraft Bedrock iniciará automaticamente e importará o mundo.
 3. O mundo aparecerá na sua lista pronto para jogar, com Resource Pack e Behavior Pack já vinculados e ativados.
 
@@ -148,14 +141,13 @@ This comprehensive guide explains how to install, import, activate, and play con
 
 ---
 
-### 1. Generated Deliverables
+### 1. Generated Deliverables (`output/` Directory)
 
-The conversion tool produces deliverables in two formats depending on the execution mode:
+All final deliverables produced by the converter are centralized strictly inside the [`output/`](file:///c:/Users/jluck/OneDrive/Pictures/Documentos/codes/Github/Originais/map-convertion/output/) directory:
 
-#### Mode A: 12-Phase Modular Pipeline (`output/` Directory)
-1. **`converted_map.mcworld`** (Recommended):
+1. **`converted_map.mcworld`** (or `<world_name>-bedrock.mcworld`) (Recommended):
    - All-in-one world package containing LevelDB terrain, converted command blocks, preserved chests, and pre-activated Behavior and Resource packs.
-2. **`converted_map.mcaddon`**:
+2. **`converted_map.mcaddon`** (or `<world_name>.mcaddon`):
    - Unified addon package containing both Behavior and Resource packs for installation into existing worlds.
 3. **`converted_behavior_pack.mcpack`**:
    - Standalone Behavior Pack (`.mcfunction` scripts, custom entities/NPCs, trade tables, and loot tables).
@@ -163,12 +155,6 @@ The conversion tool produces deliverables in two formats depending on the execut
    - Standalone Resource Pack (bedrock brick texture variations, glazed terracotta, and custom sounds).
 5. **`SHA256SUMS.txt`**:
    - Cryptographic SHA-256 integrity checksums for all generated files.
-
-#### Mode B: Automated CLI `map_converter.py` (`dist/` Directory)
-1. **`<world_name>-bedrock.mcworld`**: Complete world file ready to import.
-2. **`<world_name>-behavior-pack.mcpack`**: Standalone Behavior Pack.
-3. **`<world_name>-resource-pack.mcpack`**: Standalone Resource Pack.
-4. **`SHA256SUMS.txt`**: Cryptographic SHA-256 verification checksums.
 
 ---
 
@@ -248,7 +234,7 @@ iOS provides seamless integration with Minecraft file formats:
 ### 4. Installation on PC (Windows 10/11 & macOS)
 
 #### Option A: Direct World Import (Recommended)
-1. Double-click the generated `.mcworld` file (`output/converted_map.mcworld` or `dist/<name>-bedrock.mcworld`).
+1. Double-click the generated `.mcworld` file in [`output/`](file:///c:/Users/jluck/OneDrive/Pictures/Documentos/codes/Github/Originais/map-convertion/output/) (e.g., `output/converted_map.mcworld`).
 2. Minecraft Bedrock launches automatically and imports the world.
 3. The world appears in your worlds list with all packs linked and activated.
 
