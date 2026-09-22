@@ -7,7 +7,9 @@ Autor: João Lucas Mayrinck
 
 import os
 import io
+import gc
 import gzip
+import zipfile
 from typing import Dict, List, Any, Optional, Tuple
 import nbtlib
 
@@ -50,7 +52,6 @@ class PlayerInventoryManager:
 
         # 1. Tenta carregar de arquivo ZIP ou diretório
         if os.path.isfile(java_world_dir) and java_world_dir.lower().endswith(".zip"):
-            import zipfile
             try:
                 with zipfile.ZipFile(java_world_dir, "r") as z:
                     for name in z.namelist():
@@ -144,7 +145,7 @@ class PlayerInventoryManager:
             # Slots 0 a 35: inventário principal e hotbar
             if 0 <= slot <= 35:
                 res["inventory"].append((slot, item_data))
-            # Slots 100 a 103: armaduras
+            # Slots de Armadura Java: 100=pés, 101=pernas, 102=peitoral, 103=capacete
             elif slot == 100:  # Botas / Feet
                 res["armor"][0] = item_data
             elif slot == 101:  # Calças / Legs
@@ -183,10 +184,10 @@ class PlayerInventoryManager:
         """Constrói um Compound NBT de item no formato nativo Bedrock."""
         bedrock_name = map_item_id(item_data["id"])
         c = nbtlib.Compound({
-            "Slot": nbtlib.Byte(slot),
+            "Count": nbtlib.Byte(item_data["count"]),
+            "Damage": nbtlib.Short(item_data["damage"]),
             "Name": nbtlib.String(bedrock_name),
-            "Count": nbtlib.Byte(item_data.get("count", 1)),
-            "Damage": nbtlib.Short(item_data.get("damage", 0)),
+            "Slot": nbtlib.Byte(slot),
             "WasPickedUp": nbtlib.Byte(0)
         })
         if item_data.get("tag"):
@@ -214,7 +215,6 @@ class PlayerInventoryManager:
         if total_items == 0:
             return 0
 
-        import gc
         db = None
         try:
             db = leveldb.LevelDB(bedrock_db_dir)
@@ -283,7 +283,6 @@ class PlayerInventoryManager:
         if not os.path.exists(os.path.join(bedrock_db_dir, "CURRENT")):
             return 0, 0
 
-        import gc
         db = None
         total_containers = 0
         containers_with_items = 0
