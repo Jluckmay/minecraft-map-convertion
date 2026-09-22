@@ -936,6 +936,18 @@ class MapConverterApp:
         )
         print(f"    [OK] Total de blocos de comando convertidos no mundo: {conv_cbs}")
 
+        # Sincronização de inventário do jogador e auditoria de contêineres/baús
+        try:
+            from converter.world.inventory_manager import PlayerInventoryManager
+            injected_items = PlayerInventoryManager.sync_player_inventory(self.java_zip, db_path)
+            total_cont, cont_with_items = PlayerInventoryManager.audit_leveldb_containers(db_path)
+            if injected_items > 0:
+                print(f"    [OK] Inventário do jogador: {injected_items} itens sincronizados para ~local_player")
+            if total_cont > 0:
+                print(f"    [OK] Contêineres e baús preservados: {total_cont} total ({cont_with_items} com itens mantidos)")
+        except Exception:
+            pass
+
         # 7. Gerar Funções Utilitárias de Inicialização
         self._generate_utility_functions()
 

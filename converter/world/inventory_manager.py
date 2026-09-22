@@ -48,36 +48,70 @@ class PlayerInventoryManager:
 
         player_compound = None
 
-        # 1. Tenta carregar de level.dat
-        level_dat_path = os.path.join(java_world_dir, "level.dat")
-        if os.path.exists(level_dat_path):
+        # 1. Tenta carregar de arquivo ZIP ou diretório
+        if os.path.isfile(java_world_dir) and java_world_dir.lower().endswith(".zip"):
+            import zipfile
             try:
-                with open(level_dat_path, "rb") as f:
-                    raw = f.read()
-                try:
-                    decomp = gzip.decompress(raw)
-                    nbt = nbtlib.File.from_fileobj(io.BytesIO(decomp))
-                except Exception:
-                    nbt = nbtlib.File.from_fileobj(io.BytesIO(raw))
-                player = nbt.get("Data", {}).get("Player")
-                if player and (player.get("Inventory") or player.get("EnderItems")):
-                    player_compound = player
+                with zipfile.ZipFile(java_world_dir, "r") as z:
+                    for name in z.namelist():
+                        if name.endswith("level.dat"):
+                            raw = z.read(name)
+                            try:
+                                decomp = gzip.decompress(raw)
+                                nbt = nbtlib.File.from_fileobj(io.BytesIO(decomp))
+                            except Exception:
+                                nbt = nbtlib.File.from_fileobj(io.BytesIO(raw))
+                            player = nbt.get("Data", {}).get("Player")
+                            if player and (player.get("Inventory") or player.get("EnderItems")):
+                                player_compound = player
+                                break
+                    if not player_compound:
+                        for name in z.namelist():
+                            if "playerdata/" in name and name.endswith(".dat"):
+                                try:
+                                    raw = z.read(name)
+                                    try:
+                                        decomp = gzip.decompress(raw)
+                                        pnbt = nbtlib.File.from_fileobj(io.BytesIO(decomp))
+                                    except Exception:
+                                        pnbt = nbtlib.File.from_fileobj(io.BytesIO(raw))
+                                    if pnbt.get("Inventory") or pnbt.get("EnderItems"):
+                                        player_compound = pnbt
+                                        break
+                                except Exception:
+                                    pass
             except Exception:
                 pass
+        else:
+            level_dat_path = os.path.join(java_world_dir, "level.dat")
+            if os.path.exists(level_dat_path):
+                try:
+                    with open(level_dat_path, "rb") as f:
+                        raw = f.read()
+                    try:
+                        decomp = gzip.decompress(raw)
+                        nbt = nbtlib.File.from_fileobj(io.BytesIO(decomp))
+                    except Exception:
+                        nbt = nbtlib.File.from_fileobj(io.BytesIO(raw))
+                    player = nbt.get("Data", {}).get("Player")
+                    if player and (player.get("Inventory") or player.get("EnderItems")):
+                        player_compound = player
+                except Exception:
+                    pass
 
-        # 2. Se vazio em level.dat, busca em playerdata/*.dat
-        if not player_compound:
-            pdata_dir = os.path.join(java_world_dir, "playerdata")
-            if os.path.isdir(pdata_dir):
-                for pf in os.listdir(pdata_dir):
-                    if pf.endswith(".dat"):
-                        try:
-                            pnbt = nbtlib.load(os.path.join(pdata_dir, pf))
-                            if pnbt.get("Inventory") or pnbt.get("EnderItems"):
-                                player_compound = pnbt
-                                break
-                        except Exception:
-                            pass
+            # 2. Se vazio em level.dat, busca em playerdata/*.dat
+            if not player_compound:
+                pdata_dir = os.path.join(java_world_dir, "playerdata")
+                if os.path.isdir(pdata_dir):
+                    for pf in os.listdir(pdata_dir):
+                        if pf.endswith(".dat"):
+                            try:
+                                pnbt = nbtlib.load(os.path.join(pdata_dir, pf))
+                                if pnbt.get("Inventory") or pnbt.get("EnderItems"):
+                                    player_compound = pnbt
+                                    break
+                            except Exception:
+                                pass
 
         if not player_compound:
             return res
@@ -168,6 +202,8 @@ class PlayerInventoryManager:
         """
         if not HAS_LEVELDB or not os.path.isdir(bedrock_db_dir):
             return 0
+        if not os.path.exists(os.path.join(bedrock_db_dir, "CURRENT")):
+            return 0
 
         pdata = cls.extract_java_player_data(java_world_dir)
         total_items = (len(pdata["inventory"]) +
@@ -178,87 +214,100 @@ class PlayerInventoryManager:
         if total_items == 0:
             return 0
 
-        db = leveldb.LevelDB(bedrock_db_dir)
-        player_key = b"~local_player"
-
+        import gc
+        db = None
         try:
-            raw = db.get(player_key)
-            pnbt = nbtlib.File.from_fileobj(io.BytesIO(raw), byteorder="little")
-        except Exception:
-            # Se não existir chave ~local_player, cria uma estrutura base
-            pnbt = nbtlib.File({
-                "Pos": nbtlib.List[nbtlib.Float]([0.0, 64.0, 0.0]),
-                "Motion": nbtlib.List[nbtlib.Float]([0.0, 0.0, 0.0]),
-                "Rotation": nbtlib.List[nbtlib.Float]([0.0, 0.0]),
-                "DimensionId": nbtlib.Int(0),
-                "PlayerGameMode": nbtlib.Int(2),
-            }, byteorder="little")
+            db = leveldb.LevelDB(bedrock_db_dir)
+            player_key = b"~local_player"
 
-        # 1. Injeta inventário principal
-        b_inv = []
-        for slot, it in pdata["inventory"]:
-            b_inv.append(cls.create_bedrock_item(slot, it))
-        pnbt["Inventory"] = nbtlib.List[nbtlib.Compound](b_inv)
+            try:
+                raw = db.get(player_key)
+                pnbt = nbtlib.File.from_fileobj(io.BytesIO(raw), byteorder="little")
+            except Exception:
+                # Se não existir chave ~local_player, cria uma estrutura base
+                pnbt = nbtlib.File({
+                    "Pos": nbtlib.List[nbtlib.Float]([0.0, 64.0, 0.0]),
+                    "Motion": nbtlib.List[nbtlib.Float]([0.0, 0.0, 0.0]),
+                    "Rotation": nbtlib.List[nbtlib.Float]([0.0, 0.0]),
+                    "DimensionId": nbtlib.Int(0),
+                    "PlayerGameMode": nbtlib.Int(2),
+                }, byteorder="little")
 
-        # 2. Injeta armaduras (4 slots: 0=feet, 1=legs, 2=torso, 3=head)
-        b_armor = []
-        for i in range(4):
-            it = pdata["armor"][i]
-            if it:
-                b_armor.append(cls.create_bedrock_item(i, it))
-            else:
-                b_armor.append(nbtlib.Compound({
-                    "Name": nbtlib.String("minecraft:air"),
-                    "Damage": nbtlib.Short(0)
-                }))
-        pnbt["Armor"] = nbtlib.List[nbtlib.Compound](b_armor)
+            # 1. Injeta inventário principal
+            b_inv = []
+            for slot, it in pdata["inventory"]:
+                b_inv.append(cls.create_bedrock_item(slot, it))
+            pnbt["Inventory"] = nbtlib.List[nbtlib.Compound](b_inv)
 
-        # 3. Injeta mão secundária (Offhand)
-        if pdata["offhand"]:
-            pnbt["Offhand"] = nbtlib.List[nbtlib.Compound]([cls.create_bedrock_item(0, pdata["offhand"])])
+            # 2. Injeta armaduras (4 slots: 0=feet, 1=legs, 2=torso, 3=head)
+            b_armor = []
+            for i in range(4):
+                it = pdata["armor"][i]
+                if it:
+                    b_armor.append(cls.create_bedrock_item(i, it))
+                else:
+                    b_armor.append(nbtlib.Compound({}))
+            pnbt["Armor"] = nbtlib.List[nbtlib.Compound](b_armor)
 
-        # 4. Injeta Ender Chest se houver
-        if pdata["ender_items"]:
-            b_ender = []
-            for slot, it in pdata["ender_items"]:
-                b_ender.append(cls.create_bedrock_item(slot, it))
-            pnbt["EnderChestInventory"] = nbtlib.List[nbtlib.Compound](b_ender)
+            # 3. Injeta mão secundária (offhand)
+            if pdata["offhand"]:
+                pnbt["Offhand"] = nbtlib.List[nbtlib.Compound]([
+                    cls.create_bedrock_item(0, pdata["offhand"])
+                ])
 
-        # Salva de volta no LevelDB atomicamente
-        out_buf = io.BytesIO()
-        pnbt.write(out_buf, byteorder="little")
-        db.put(player_key, out_buf.getvalue())
+            # 4. Injeta baú do fim (Ender Chest)
+            if pdata["ender_items"]:
+                b_ender = []
+                for slot, it in pdata["ender_items"]:
+                    b_ender.append(cls.create_bedrock_item(slot, it))
+                pnbt["EnderChestInventory"] = nbtlib.List[nbtlib.Compound](b_ender)
 
-        return total_items
+            # Grava no banco LevelDB
+            out_buf = io.BytesIO()
+            pnbt.write(out_buf, byteorder="little")
+            db.put(player_key, out_buf.getvalue())
+            return total_items
+        finally:
+            if db is not None:
+                del db
+                gc.collect()
 
-    @staticmethod
-    def audit_leveldb_containers(bedrock_db_dir: str) -> Tuple[int, int]:
+    @classmethod
+    def audit_leveldb_containers(cls, bedrock_db_dir: str) -> Tuple[int, int]:
         """
         Audita contêineres e baús no banco LevelDB.
         Retorna (total_contêineres, contêineres_com_itens).
         """
         if not HAS_LEVELDB or not os.path.isdir(bedrock_db_dir):
             return 0, 0
+        if not os.path.exists(os.path.join(bedrock_db_dir, "CURRENT")):
+            return 0, 0
 
-        db = leveldb.LevelDB(bedrock_db_dir)
+        import gc
+        db = None
         total_containers = 0
         containers_with_items = 0
         container_ids = {"Chest", "TrappedChest", "Barrel", "ShulkerBox", "Dispenser", "Dropper", "Hopper"}
 
-        for k, val in db.items():
-            if len(k) >= 9 and k[8:9] == b'1':
-                buf = io.BytesIO(val)
-                while buf.tell() < len(val):
-                    try:
-                        te_nbt = nbtlib.File.from_fileobj(buf, byteorder="little")
-                        te_id = str(te_nbt.get("id", ""))
-                        if te_id in container_ids:
-                            total_containers += 1
-                            items = te_nbt.get("Items", [])
-                            if items and len(items) > 0:
-                                containers_with_items += 1
-                    except Exception:
-                        break
+        try:
+            db = leveldb.LevelDB(bedrock_db_dir)
+            for k, val in db.items():
+                if len(k) >= 9 and k[8:9] == b'1':
+                    buf = io.BytesIO(val)
+                    while buf.tell() < len(val):
+                        try:
+                            te_nbt = nbtlib.File.from_fileobj(buf, byteorder="little")
+                            te_id = str(te_nbt.get("id", ""))
+                            if te_id in container_ids:
+                                total_containers += 1
+                                items = te_nbt.get("Items", [])
+                                if items and len(items) > 0:
+                                    containers_with_items += 1
+                        except Exception:
+                            break
+        finally:
+            if db is not None:
+                del db
+                gc.collect()
 
         return total_containers, containers_with_items
-
