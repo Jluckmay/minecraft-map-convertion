@@ -1,0 +1,108 @@
+{
+  "source_archive": "C:\\Users\\jluck\\OneDrive\\Pictures\\Documentos\\codes\\Github\\Originais\\map-convertion\\input\\java-version.zip",
+  "level_info": {
+    "LevelName": "§4§lMazescapist",
+    "DataVersion": 2586,
+    "Version": {
+      "Name": "1.16.5",
+      "Id": 2586,
+      "Snapshot": 0
+    },
+    "SpawnX": 381,
+    "SpawnY": 5,
+    "SpawnZ": -2171,
+    "Time": 366970977,
+    "DayTime": 1000,
+    "Difficulty": 1,
+    "DifficultyLocked": false,
+    "Hardcore": false,
+    "GameRules": {
+      "doFireTick": "false",
+      "maxCommandChainLength": "65536",
+      "fireDamage": "true",
+      "reducedDebugInfo": "false",
+      "disableElytraMovementCheck": "false",
+      "announceAdvancements": "true",
+      "drowningDamage": "true",
+      "commandBlockOutput": "false",
+      "forgiveDeadPlayers": "true",
+      "doMobSpawning": "false",
+      "maxEntityCramming": "24",
+      "disableRaids": "false",
+      "doWeatherCycle": "false",
+      "doDaylightCycle": "false",
+      "showDeathMessages": "true",
+      "doTileDrops": "true",
+      "universalAnger": "false",
+      "doInsomnia": "true",
+      "doImmediateRespawn": "false",
+      "naturalRegeneration": "true",
+      "doMobLoot": "true",
+      "fallDamage": "true",
+      "keepInventory": "false",
+      "doEntityDrops": "true",
+      "doLimitedCrafting": "false",
+      "mobGriefing": "false",
+      "randomTickSpeed": "0",
+      "spawnRadius": "10",
+      "doTraderSpawning": "true",
+      "logAdminCommands": "true",
+      "spectatorsGenerateChunks": "true",
+      "sendCommandFeedback": "true",
+      "doPatrolSpawning": "true"
+    }
+  },
+  "dimensions": {
+    "overworld": {
+      "regions": 259,
+      "sample_mca": [
+        "r.-1.-1.mca",
+        "r.-1.-19.mca",
+        "r.-1.-199.mca",
+        "r.-1.-2.mca",
+        "r.-1.-20.mca"
+      ]
+    },
+    "nether": {
+      "regions": 41,
+      "sample_mca": [
+        "r.-1.-1.mca",
+        "r.-1.-2.mca",
+        "r.-1.-3.mca",
+        "r.-1.-4.mca",
+        "r.-1.-5.mca"
+      ]
+    },
+    "the_end": {
+      "regions": 0,
+      "sample_mca": []
+    }
+  },
+  "scoreboard": {
+    "objectives": [
+      {
+        "Name": "dayCounter",
+        "DisplayName": "{\"text\":\"dayCounter\"}",
+        "CriteriaName": "dummy"
+      }
+    ],
+    "teams": []
+  },
+  "datapacks": [
+    {
+      "name": "bukkit",
+      "is_zip": false,
+      "functions": 0,
+      "loot_tables": 0,
+      "tags": 0
+    },
+    {
+      "name": "MazeRunner",
+      "is_zip": false,
+      "functions": 53,
+      "loot_tables": 21,
+      "tags": 0
+    }
+  ],
+  "total_regions": 300
+}

@@ -14,8 +14,14 @@ _backups/
 # Heavy binary Minecraft world archives (>50MB limits)
 *.zip
 *.mcworld
+*.mcpack
+*.mcaddon
 inputs/*.zip
 inputs/*.mcworld
+input/
+extracted/
+output/*
+!output/.gitkeep
 !inputs/README.md
 
 # Build output directories (generated locally by map_converter.py)
