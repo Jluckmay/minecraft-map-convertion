@@ -74,29 +74,31 @@ class BehaviorPackGenerator:
         entities_dir = os.path.join(target_bp_dir, "entities")
 
         # 1. UUIDs estáveis
-        bp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.bp.header.1.20.0"))
-        bp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.bp.module.1.20.0"))
+        bp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.bp.header.1.21.0"))
+        bp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.bp.module.1.21.0"))
 
         manifest = {
             "format_version": 2,
             "header": {
                 "name": f"{world_name} Behavior Pack",
-                "description": f"Behavior Pack for {world_name} (Bedrock 1.20+)",
+                "description": f"Behavior Pack for {world_name} (Bedrock 1.21+)",
                 "uuid": bp_header_uuid,
                 "version": [1, 0, 0],
-                "min_engine_version": [1, 20, 0]
+                "min_engine_version": [1, 21, 0]
             },
             "modules": [{
                 "type": "data",
                 "description": f"{world_name} BP Logic",
                 "uuid": bp_module_uuid,
                 "version": [1, 0, 0]
-            }],
-            "dependencies": [{
+            }]
+        }
+        if rp_header_uuid:
+            manifest["dependencies"] = [{
                 "uuid": rp_header_uuid,
                 "version": [1, 0, 0]
             }]
-        }
+
         with open(os.path.join(target_bp_dir, "manifest.json"), "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2)
 
@@ -178,16 +180,18 @@ class BehaviorPackGenerator:
                                         with open(ent_file, "w", encoding="utf-8") as ef:
                                             json.dump(ent_data, ef, indent=2)
 
-                # Segundo passo: traduzir todas as funções
+                # Segundo passo: traduzir todas as funções e salvar em ambos os caminhos (namespaced e root)
                 for fname, lines in func_files:
                     norm_path = fname
+                    ns = "custom"
+                    subpath = os.path.basename(fname)
                     if "data/" in norm_path:
                         parts = norm_path.split("data/", 1)[1].split("/")
                         ns = parts[0]
                         subpath = "/".join(parts[2:]) if len(parts) > 2 and parts[1] == "functions" else "/".join(parts[1:])
-                        out_func_path = os.path.join(func_dir, ns, subpath)
-                    else:
-                        out_func_path = os.path.join(func_dir, os.path.basename(fname))
+
+                    out_func_path = os.path.join(func_dir, ns, subpath)
+                    root_func_path = os.path.join(func_dir, os.path.basename(fname))
 
                     os.makedirs(os.path.dirname(out_func_path), exist_ok=True)
                     converted_lines = []
@@ -199,22 +203,31 @@ class BehaviorPackGenerator:
                             trans = CommandTranslator.translate(line_s, known_npcs, safe_name)
                             converted_lines.append(trans)
 
+                    content_str = "\n".join(converted_lines) + "\n"
                     with open(out_func_path, "w", encoding="utf-8") as of:
-                        of.write("\n".join(converted_lines) + "\n")
+                        of.write(content_str)
+                    with open(root_func_path, "w", encoding="utf-8") as rf:
+                        rf.write(content_str)
                     converted_funcs += 1
 
-        # 3. Funções Utilitárias e Hooks de Tick
+        # 3. Funções Utilitárias e Hooks de Tick com Tickingareas do Labirinto
         world_func_dir = os.path.join(func_dir, safe_name)
         os.makedirs(world_func_dir, exist_ok=True)
 
         init_lines = [
-            f"# {world_name} Initialization for Bedrock 1.20+",
-            f"tickingarea add 0 0 0 0 319 0 {safe_name}_core",
+            f"# {world_name} Initialization for Bedrock 1.21+",
+            "tickingarea add 250 0 -2250 350 120 -2150 maze_spawn",
+            "tickingarea add 250 0 -2450 350 120 -2350 maze_north",
+            "tickingarea add 450 0 -2250 550 120 -2050 maze_east",
+            "scoreboard objectives add DAY_COUNTER dummy",
+            "scoreboard objectives add dayCounter dummy",
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players set #world {safe_name}_initialized 1",
-            f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World successfully initialized for Bedrock 1.20+!"}}]}}'
+            f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
         with open(os.path.join(world_func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
+            f.write("\n".join(init_lines) + "\n")
+        with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(init_lines) + "\n")
 
         tick_lines = [

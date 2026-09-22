@@ -101,6 +101,10 @@ class CommandTranslator:
         if s.startswith("execute ") and " run " in s:
             exec_prefix, run_cmd = s.split(" run ", 1)
             exec_prefix = cls.translate_selector(exec_prefix)
+            # Normalização de dimensões no execute in
+            exec_prefix = re.sub(r'\bminecraft:overworld\b', 'overworld', exec_prefix)
+            exec_prefix = re.sub(r'\bminecraft:the_nether\b', 'nether', exec_prefix)
+            exec_prefix = re.sub(r'\bminecraft:the_end\b', 'the_end', exec_prefix)
             # Normalização de namespace em chamadas de função
             exec_prefix = re.sub(r'\bfunction\s+([a-zA-Z0-9._-]+):([a-zA-Z0-9._/-]+)', r'function \1/\2', exec_prefix)
             trans_inner = cls.translate(run_cmd, known_npcs, world_safe_name)
@@ -160,20 +164,27 @@ class CommandTranslator:
                 rest = parts[idx:]
                 return f"playsound {snd_bedrock} {' '.join(rest)}".strip()
 
-        # 7. effect give
-        if s.startswith("effect give "):
-            rem = s[len("effect give "):].strip()
+        # 7. effect (give / clear)
+        if s.startswith("effect give ") or s.startswith("effect "):
+            rem = s[len("effect give "):] if s.startswith("effect give ") else s[len("effect "):]
+            rem = re.sub(r'\bminecraft:', '', rem)
             if "glowing" in rem:
                 return f"# [Bedrock Conversion] effect glowing não suportado no Bedrock: {s}"
-            return f"effect {rem}"
+            return f"effect {rem.strip()}"
 
-        # 8. give com livros/NBT complexo
+        # 8. tp sem seletor (ex: tp 224 44 -2210 -> tp @s 224 44 -2210)
+        m_tp = re.match(r'^(tp|teleport)\s+([~^0-9.-]+)\s+([~^0-9.-]+)\s+([~^0-9.-]+)$', s)
+        if m_tp:
+            verb, x, y, z = m_tp.groups()
+            return f"{verb} @s {x} {y} {z}"
+
+        # 9. give com livros/NBT complexo
         if s.startswith("give ") and "written_book{" in s:
             parts = s.split()
             target = parts[1] if len(parts) > 1 else "@s"
             return f"give {target} written_book 1"
 
-        # 9. summon com NPCs e tags
+        # 10. summon com NPCs e tags
         if known_npcs:
             for npc in known_npcs:
                 npc_tag = f":npc_{npc}"
@@ -191,20 +202,22 @@ class CommandTranslator:
                 name_match = re.search(r'CustomName\s*:\s*\'(?:\{.*?"text"\s*:\s*"([^"]+)".*?\}|"([^"]+)")\'', nbt_part)
                 if name_match:
                     found_name = name_match.group(1) or name_match.group(2)
-                    return f"{prefix}{clean_type} {x} {y} {z} \"{found_name}\""
+                    return f"{prefix}{clean_type} {x} {y} {z} 0 0 \"{found_name}\""
                 return f"{prefix}{clean_type} {x} {y} {z}"
             return f"{prefix}{clean_type} {x} {y} {z}"
 
-        # 10. setblock / fill - limpeza de namespace
+        # 11. setblock / fill - limpeza de namespace
         if s.startswith("setblock ") or s.startswith("fill "):
             s = re.sub(r'\bminecraft:', '', s)
 
-        # 11. gamerule
+        # 12. gamerule
         if s.startswith("gamerule "):
             parts = s.split()
             if len(parts) == 3:
                 rule, val = parts[1].lower(), parts[2].lower()
                 return f"gamerule {rule} {val}"
 
+        # Limpeza geral de namespace minecraft: em comandos padrão
+        s = re.sub(r'\bminecraft:', '', s)
         return s
 

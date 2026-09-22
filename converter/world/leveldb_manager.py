@@ -212,21 +212,28 @@ class BedrockLevelDBManager:
                 for key, val in entries:
                     if b"CommandBlock" in val or b"Command" in val:
                         try:
-                            # NBT little-endian Bedrock
-                            tag = nbtlib.File.from_fileobj(io.BytesIO(val), byteorder="little")
-                            modified_this = False
-                            if "Command" in tag:
-                                orig_cmd = str(tag["Command"])
-                                new_cmd = convert_func(orig_cmd)
-                                if new_cmd != orig_cmd:
-                                    tag["Command"] = nbtlib.String(new_cmd)
-                                    modified_this = True
-                                    total_modified += 1
+                            buf = io.BytesIO(val)
+                            tags = []
+                            val_modified = False
+                            while buf.tell() < len(val):
+                                try:
+                                    tag = nbtlib.File.from_fileobj(buf, byteorder="little")
+                                    tags.append(tag)
+                                    if tag.get("id") == "CommandBlock" and "Command" in tag:
+                                        orig_cmd = str(tag["Command"])
+                                        new_cmd = convert_func(orig_cmd)
+                                        if new_cmd != orig_cmd:
+                                            tag["Command"] = nbtlib.String(new_cmd)
+                                            val_modified = True
+                                            total_modified += 1
+                                except Exception:
+                                    break
 
-                            if modified_this:
-                                buf = io.BytesIO()
-                                tag.write(buf, byteorder="little")
-                                val = buf.getvalue()
+                            if val_modified and tags:
+                                out_buf = io.BytesIO()
+                                for tag in tags:
+                                    tag.write(out_buf, byteorder="little")
+                                val = out_buf.getvalue()
                                 file_modified = True
                         except Exception:
                             pass

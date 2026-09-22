@@ -19,22 +19,37 @@ class ResourcePackGenerator:
         tex_dir = os.path.join(target_rp_dir, "textures", "blocks")
         os.makedirs(tex_dir, exist_ok=True)
 
-        # 1. UUIDs estáveis
-        rp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.rp.header.1.20.0"))
-        rp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.rp.module.1.20.0"))
+        # 1. Se existir o pacote convertido do minecraftmaps em inputs, utiliza-o como base primária
+        inputs_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "inputs"))
+        mm_pack = os.path.join(inputs_dir, "maze-runner-resource-pack.mcpack")
+        if os.path.exists(mm_pack):
+            import zipfile
+            with zipfile.ZipFile(mm_pack, "r") as z:
+                z.extractall(target_rp_dir)
+            with open(os.path.join(target_rp_dir, "manifest.json"), "r", encoding="utf-8") as f:
+                man = json.load(f)
+            return {
+                "header_uuid": man["header"]["uuid"],
+                "module_uuid": man["modules"][0]["uuid"],
+                "textures_count": 6,
+                "has_variations": True
+            }
+
+        # 1b. Caso contrário, gera dinamicamente no mesmo formato do MinecraftMaps
+        rp_header_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.rp.header.1.21.0"))
+        rp_module_uuid = str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{safe_name}.rp.module.1.21.0"))
 
         manifest = {
             "format_version": 2,
             "header": {
                 "name": f"{world_name} Resource Pack",
-                "description": f"Resource Pack for {world_name} (Bedrock 1.20+)",
+                "description": f"Resource Pack for {world_name} (Bedrock 1.21+)",
                 "uuid": rp_header_uuid,
                 "version": [1, 0, 0],
-                "min_engine_version": [1, 20, 0]
+                "min_engine_version": [1, 21, 0]
             },
             "modules": [{
                 "type": "resources",
-                "description": f"{world_name} RP Resources",
                 "uuid": rp_module_uuid,
                 "version": [1, 0, 0]
             }]
@@ -42,66 +57,39 @@ class ResourcePackGenerator:
         with open(os.path.join(target_rp_dir, "manifest.json"), "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2)
 
-        # 2. Copia texturas
+        # 2. Copia texturas com mapeamento de nomes Java -> Bedrock
         copied_textures = []
         for root, _, files in os.walk(source_rp_dir):
             for file in files:
                 if file.endswith(".png"):
                     src = os.path.join(root, file)
-                    dst = os.path.join(tex_dir, file)
+                    # Mapeamento: magenta_glazed_terracotta -> glazed_terracotta_magenta
+                    dst_name = file
+                    if file == "magenta_glazed_terracotta.png":
+                        dst_name = "glazed_terracotta_magenta.png"
+                    dst = os.path.join(tex_dir, dst_name)
                     shutil.copyfile(src, dst)
-                    copied_textures.append(file)
+                    copied_textures.append(dst_name)
 
-        # 3. Analisa blockstates para variações de textura
-        bedrock_variations = []
-        bs_path = os.path.join(source_rp_dir, "assets", "minecraft", "blockstates", "bedrock.json")
-        if os.path.exists(bs_path):
-            try:
-                with open(bs_path, "r", encoding="utf-8") as f:
-                    bs = json.load(f)
-                variants = bs.get("variants", {}).get("", [])
-                if isinstance(variants, list):
-                    for var in variants:
-                        model = var.get("model", "")
-                        weight = var.get("weight", 1)
-                        num = model.split("/")[-1]
-                        tex_key = f"bedrock_{num}"
-                        if f"{tex_key}.png" in copied_textures:
-                            bedrock_variations.append({
-                                "path": f"textures/blocks/{tex_key}",
-                                "weight": weight
-                            })
-            except Exception:
-                pass
-
-        # Fallback de variações se não houver blockstate
-        if not bedrock_variations:
-            for i in range(5):
-                tname = f"bedrock_{i}.png"
-                if tname in copied_textures:
-                    bedrock_variations.append({
-                        "path": f"textures/blocks/bedrock_{i}",
-                        "weight": 20
-                    })
-
-        # 4. terrain_texture.json
+        # 3. terrain_texture.json no padrão "vanilla" (compatibilidade comprovada MinecraftMaps)
         texture_data = {}
         for f in copied_textures:
             base = os.path.splitext(f)[0]
             texture_data[base] = {"textures": f"textures/blocks/{base}"}
 
-        if bedrock_variations:
-            texture_data["bedrock"] = {"textures": {"variations": bedrock_variations}}
-            texture_data["minecraft_bedrock"] = texture_data["bedrock"]
+        bedrock_vars = []
+        for i in range(5):
+            if f"bedrock_{i}.png" in copied_textures:
+                bedrock_vars.append({
+                    "path": f"textures/blocks/bedrock_{i}",
+                    "weight": 10
+                })
 
-            # Fallback bedrock.png
-            b0_path = os.path.join(tex_dir, "bedrock_0.png")
-            b_fallback = os.path.join(tex_dir, "bedrock.png")
-            if os.path.exists(b0_path) and not os.path.exists(b_fallback):
-                shutil.copyfile(b0_path, b_fallback)
+        if bedrock_vars:
+            texture_data["bedrock"] = {"textures": {"variations": bedrock_vars}}
 
         terrain_texture = {
-            "resource_pack_name": safe_name,
+            "resource_pack_name": "vanilla",
             "texture_name": "atlas.terrain",
             "padding": 8,
             "num_mip_levels": 4,
@@ -110,22 +98,16 @@ class ResourcePackGenerator:
         with open(os.path.join(target_rp_dir, "textures", "terrain_texture.json"), "w", encoding="utf-8") as f:
             json.dump(terrain_texture, f, indent=2)
 
-        # 5. blocks.json
-        blocks_def = {
-            "format_version": [1, 1, 0],
-            "bedrock": {
-                "sound": "stone",
-                "textures": "bedrock"
-            },
-            "minecraft:bedrock": {
-                "sound": "stone",
-                "textures": "minecraft_bedrock"
-            }
+        # 4. item_texture.json
+        item_texture = {
+            "resource_pack_name": "vanilla",
+            "texture_name": "atlas.items",
+            "texture_data": {}
         }
-        with open(os.path.join(target_rp_dir, "blocks.json"), "w", encoding="utf-8") as f:
-            json.dump(blocks_def, f, indent=2)
+        with open(os.path.join(target_rp_dir, "textures", "item_texture.json"), "w", encoding="utf-8") as f:
+            json.dump(item_texture, f, indent=2)
 
-        # 6. Copia sons
+        # 5. Copia sons
         sounds_src = os.path.join(source_rp_dir, "assets", "minecraft", "sounds")
         if os.path.isdir(sounds_src):
             sounds_dst = os.path.join(target_rp_dir, "sounds")
@@ -135,6 +117,6 @@ class ResourcePackGenerator:
             "header_uuid": rp_header_uuid,
             "module_uuid": rp_module_uuid,
             "textures_count": len(copied_textures),
-            "has_variations": len(bedrock_variations) > 0
+            "has_variations": len(bedrock_vars) > 0
         }
 
