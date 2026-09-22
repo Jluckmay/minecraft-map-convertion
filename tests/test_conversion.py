@@ -47,11 +47,11 @@ class TestUniversalMapConverter(unittest.TestCase):
         """Testa conversão de comandos exclusivos de Java (/forceload e /data merge)."""
         f_cmd = "forceload add 100 100 200 200"
         conv_f = DatapackConverter.convert_command(f_cmd)
-        self.assertTrue(conv_f.startswith("# [Bedrock Conversion]"))
+        self.assertTrue(conv_f.startswith("tickingarea add"))
 
         d_cmd = "data merge block 10 20 30 {Delay:0}"
         conv_d = DatapackConverter.convert_command(d_cmd)
-        self.assertTrue(conv_d.startswith("# [Bedrock Conversion]"))
+        self.assertEqual(conv_d, "setblock 10 20 30 mob_spawner")
 
     def test_04_loot_table_conversion(self):
         """Testa conversão de pools, rolls e funções em loot tables."""
@@ -113,7 +113,7 @@ class TestUniversalMapConverter(unittest.TestCase):
         """Testa inserção automática de cláusula de idempotência em invocações."""
         cmd = "summon namespace:npc_trader 100 64 200"
         conv = DatapackConverter.convert_command(cmd, known_npcs={"trader"})
-        self.assertTrue(conv.startswith("execute unless entity @e[type=namespace:npc_trader] run summon"))
+        self.assertTrue(conv.startswith("execute unless entity @e[type=custom:npc_trader] run summon"))
 
     def test_07_end_to_end_synthetic_conversion(self):
         """Testa o fluxo completo do conversor utilizando um mundo sintético em memória."""

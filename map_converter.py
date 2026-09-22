@@ -259,13 +259,30 @@ class DatapackConverter:
         if s.startswith('/'):
             s = s[1:].strip()
 
-        # 2. forceload -> Comentário com tickingarea
+        # 2. forceload -> tickingarea funcional
         if s.startswith("forceload add ") or s.startswith("forceload remove "):
-            return f"# [Bedrock Conversion] {s} (coberto por tickingarea persistente)"
+            parts = s.split()
+            if len(parts) in (4, 6) and parts[1] == "add":
+                x1, z1 = int(parts[2]), int(parts[3])
+                x2, z2 = (int(parts[4]), int(parts[5])) if len(parts) == 6 else (x1, z1)
+                block_x1, block_z1 = x1 * 16, z1 * 16
+                block_x2, block_z2 = x2 * 16 + 15, z2 * 16 + 15
+                area_name = f"java_forceload_{x1}_{z1}_{x2}_{z2}".replace("-", "m")
+                return f"tickingarea add {block_x1} 0 {block_z1} {block_x2} 319 {block_z2} {area_name}"
+            if len(parts) in (4, 6) and parts[1] == "remove":
+                x1, z1 = int(parts[2]), int(parts[3])
+                x2, z2 = (int(parts[4]), int(parts[5])) if len(parts) == 6 else (x1, z1)
+                area_name = f"java_forceload_{x1}_{z1}_{x2}_{z2}".replace("-", "m")
+                return f"tickingarea remove {area_name}"
+            return f"# [Bedrock Conversion] unsupported forceload syntax: {s}"
 
         # 3. data merge block {Delay:0}
         if s.startswith("data merge block ") and "Delay:0" in s:
-            return f"# [Bedrock Conversion] {s} (spawners ativam nativamente por proximidade no Bedrock)"
+            match = re.match(r"data merge block (-?\d+) (-?\d+) (-?\d+) .*", s)
+            if match:
+                x, y, z = match.groups()
+                return f"setblock {x} {y} {z} mob_spawner"
+            return f"# [Bedrock Conversion] unsupported data merge syntax: {s}"
 
         # 4. Seletores de distância Java: distance=..X -> r=X, distance=X..Y -> rm=X,r=Y
         s = re.sub(r'distance=\.\.([0-9.]+)', r'r=\1', s)
@@ -443,7 +460,8 @@ class DatapackConverter:
         if known_npcs:
             for npc in known_npcs:
                 if f":npc_{npc}" in line and not line.startswith("execute unless entity"):
-                    line = f"execute unless entity @e[type=namespace:npc_{npc}] run {line}"
+                    entity_type = f"{world_safe_name}:npc_{npc}"
+                    line = f"execute unless entity @e[type={entity_type}] run {line}"
                     return line
 
         m = re.search(r'^(.*?\bsummon\s+)([a-zA-Z0-9:_]+)\s+([~^0-9.-]+)\s+([~^0-9.-]+)\s+([~^0-9.-]+)(\s*\{.*\}|\s*)$', line)
@@ -1041,6 +1059,7 @@ class MapConverterApp:
                             "variations": bedrock_variations
                         }
                     }
+                    texture_data["minecraft_bedrock"] = texture_data["bedrock"]
                     b0_path = os.path.join(tex_block_dir, "bedrock_0.png")
                     b_fallback = os.path.join(tex_block_dir, "bedrock.png")
                     if os.path.exists(b0_path) and not os.path.exists(b_fallback):
@@ -1051,6 +1070,10 @@ class MapConverterApp:
                         "bedrock": {
                             "sound": "stone",
                             "textures": "bedrock"
+                        },
+                        "minecraft:bedrock": {
+                            "sound": "stone",
+                            "textures": "minecraft_bedrock"
                         }
                     }
                     with open(os.path.join(self.rp_dir, "blocks.json"), "w", encoding="utf-8") as f:
@@ -1194,10 +1217,22 @@ class MapConverterApp:
         # Função de inicialização
         init_lines = [
             f"# {self.world_name} Initialization for Bedrock 1.20+",
+            f"tickingarea add 0 0 0 0 319 0 {self.safe_name}_core",
+            f"scoreboard objectives add {self.safe_name}_initialized dummy",
+            f"scoreboard players set #world {self.safe_name}_initialized 1",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.20+!"}}]}}'
         ]
         with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(init_lines) + "\n")
+
+        tick_lines = [
+            f"scoreboard objectives add {self.safe_name}_initialized dummy",
+            f"execute unless score #world {self.safe_name}_initialized matches 1 run function {self.safe_name}/init_world"
+        ]
+        with open(os.path.join(self.bp_dir, "functions", "tick.mcfunction"), "w", encoding="utf-8") as f:
+            f.write("\n".join(tick_lines) + "\n")
+        with open(os.path.join(self.bp_dir, "tick.json"), "w", encoding="utf-8") as f:
+            json.dump({"values": ["tick"]}, f, indent=2)
 
         # Função de kit inicial
         kit_lines = [
