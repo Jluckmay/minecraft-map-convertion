@@ -261,3 +261,4 @@ class PlayerInventoryManager:
                         break
 
         return total_containers, containers_with_items
+
