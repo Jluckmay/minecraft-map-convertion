@@ -11,6 +11,8 @@ import uuid
 import re
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 OUTPUT_DIR = os.path.join(BASE_DIR, "output")
 
 JAVA_RESIDUAL_PATTERNS = [
@@ -150,6 +152,17 @@ def main():
     cmd_count, cmd_issues = validate_commands_in_functions(bp_dir)
     print(f"    [OK] Total de comandos de funções auditados: {cmd_count}")
     all_issues.extend(cmd_issues)
+
+    # 5. Validação de Contêineres, Baús e LevelDB
+    print("[*] Validando integridade de contêineres, baús e inventários no LevelDB...")
+    db_dir = os.path.join(world_dir, "db")
+    if os.path.isdir(db_dir):
+        try:
+            from converter.world.inventory_manager import PlayerInventoryManager
+            total_c, c_items = PlayerInventoryManager.audit_leveldb_containers(db_dir)
+            print(f"    [OK] Contêineres validados no LevelDB: {total_c} detectados ({c_items} com itens preservados)")
+        except Exception as e:
+            all_issues.append(f"Falha ao auditar contêineres no LevelDB: {e}")
 
     print("\n-----------------------------------------------------------------")
     if not all_issues:

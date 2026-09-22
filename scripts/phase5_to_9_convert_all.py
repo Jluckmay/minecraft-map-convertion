@@ -21,6 +21,7 @@ from converter.resource_pack.rp_generator import ResourcePackGenerator
 from converter.behavior_pack.bp_generator import BehaviorPackGenerator
 from converter.commands.translator import CommandTranslator
 from converter.world.leveldb_manager import BedrockLevelDBManager
+from converter.world.inventory_manager import PlayerInventoryManager
 
 def main():
     print("=================================================================")
@@ -98,6 +99,13 @@ def main():
         lambda cmd: CommandTranslator.translate(cmd, known_npcs_set, safe_name)
     )
     print(f"    [OK] Total de blocos de comando convertidos e atualizados no LevelDB: {modified_cbs}")
+
+    # Sincronização de inventário do jogador e auditoria de contêineres/baús
+    print("    -> Sincronizando inventário do jogador e auditando contêineres/baús...")
+    injected_items = PlayerInventoryManager.sync_player_inventory(extracted_world, db_dir)
+    total_cont, cont_with_items = PlayerInventoryManager.audit_leveldb_containers(db_dir)
+    print(f"    [OK] Inventário do jogador: {injected_items} itens sincronizados para ~local_player")
+    print(f"    [OK] Contêineres e baús preservados: {total_cont} total ({cont_with_items} com itens mantidos)")
 
     # Integração de pacotes no mundo Bedrock
     print("    -> Integrando Behavior Pack e Resource Pack dentro do mundo...")

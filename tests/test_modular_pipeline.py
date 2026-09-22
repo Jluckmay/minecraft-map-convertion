@@ -21,6 +21,7 @@ from converter.world.leveldb_manager import BedrockLevelDBManager
 from converter.resource_pack.rp_generator import ResourcePackGenerator
 from converter.behavior_pack.bp_generator import BehaviorPackGenerator
 from converter.world.anvil_reader import AnvilReader
+from converter.world.inventory_manager import PlayerInventoryManager
 
 class TestModularConverterPipeline(unittest.TestCase):
     """Testes unitários dos novos componentes modulares."""
@@ -106,6 +107,31 @@ class TestModularConverterPipeline(unittest.TestCase):
         cmd = 'summon villager 264 59 -2184 {CustomName:\'{"text":"Bruce"}\'}'
         res = CommandTranslator.translate(cmd)
         self.assertEqual(res, 'summon villager "Bruce" 264 59 -2184')
+
+    def test_inventory_manager_create_bedrock_item(self):
+        """Testa construção de item Bedrock a partir de dados Java."""
+        item_data = {
+            "id": "minecraft:iron_sword",
+            "count": 1,
+            "damage": 15,
+            "tag": nbtlib.Compound({"display": nbtlib.Compound({"Name": nbtlib.String('{"text":"Espada"}')})})
+        }
+        b_item = PlayerInventoryManager.create_bedrock_item(0, item_data)
+        self.assertEqual(int(b_item["Slot"]), 0)
+        self.assertEqual(str(b_item["Name"]), "minecraft:iron_sword")
+        self.assertEqual(int(b_item["Count"]), 1)
+        self.assertEqual(int(b_item["Damage"]), 15)
+        self.assertIn("tag", b_item)
+
+    def test_inventory_manager_extract_java_player_data(self):
+        """Testa extração de inventário de diretório Java (mesmo com inventário vazio)."""
+        java_world_dir = os.path.join(BASE_DIR, "extracted", "java_world")
+        if os.path.isdir(java_world_dir):
+            pdata = PlayerInventoryManager.extract_java_player_data(java_world_dir)
+            self.assertIn("inventory", pdata)
+            self.assertIn("armor", pdata)
+            self.assertIn("offhand", pdata)
+            self.assertIn("ender_items", pdata)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

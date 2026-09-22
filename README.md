@@ -43,9 +43,12 @@ This tool solves this problem by analyzing the Java world directly, converting d
 - **Embedded Resource Extraction**:
   - Extracts custom block textures and generates `terrain_texture.json`.
   - Converts `icon.png` into `world_icon.jpeg` and `pack_icon.png`.
+- **Containers & Player Inventory Preservation**:
+  - Automatically preserves 100% of container blocks (chests, trapped chests, barrels, hoppers, shulker boxes, dispensers, droppers) in LevelDB.
+  - Automatically synchronizes player inventories, armor slots, offhand, and Ender Chest items from Java `level.dat` and `playerdata` into Bedrock `~local_player`.
 - **Packaging & Validation**:
-  - Generates stable UUIDs v4 and manifest files configured for Bedrock 1.26.40.
-  - Packages standalone `.mcpack` files and compiles `.mcworld` with SHA-256 integrity verification.
+  - Generates stable UUIDs v4 and manifest files configured for Bedrock 1.20+/1.21+.
+  - Packages standalone `.mcpack` files, unified `.mcaddon`, and compiles `.mcworld` with SHA-256 integrity verification.
 
 > [!NOTE]
 > **Large Files Notice**: Heavy binary archives (`*.zip`, `*.mcworld` >50–100 MB) are excluded from the Git repository via `.gitignore` to adhere to GitHub file size limits. Place your input files into `inputs/` and run `python map_converter.py` to compile the final `.mcworld` locally.
@@ -119,12 +122,15 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
 - **Extração de Recursos e Texturas**:
   - Extrai texturas personalizadas de blocos e gera o arquivo `terrain_texture.json`.
   - Gera `world_icon.jpeg` e `pack_icon.png` a partir do `icon.png` original.
+- **Preservação de Baús, Contêineres e Inventário**:
+  - Preserva 100% dos blocos de contêineres (`Chest`, `TrappedChest`, `Barrel`, `ShulkerBox`, `Hopper`, `Dispenser`, `Dropper`) com todos os itens, slots e quantidades no LevelDB.
+  - Sincroniza automaticamente inventário, armaduras, offhand e Ender Chest do jogador (`level.dat` e `playerdata`) para `~local_player` no Bedrock.
 - **Empacotamento e Hashes SHA-256**:
-  - Cria manifestos válidos com UUIDs v4 exclusivos e compatibilidade declarada com Bedrock 1.26.40.
-  - Gera o `.mcworld` final pronto para importação e os pacotes independentes `.mcpack`.
+  - Cria manifestos válidos com UUIDs v4 exclusivos e compatibilidade declarada com Bedrock 1.20+/1.21+.
+  - Gera o `.mcworld` final pronto para importação, o `.mcaddon` unificado e os pacotes independentes `.mcpack`.
 
 > [!NOTE]
-> **Aviso sobre Arquivos Pesados**: Arquivos binários pesados (`*.zip`, `*.mcworld` >50–100 MB) estão excluídos do repositório Git via `.gitignore` para respeitar os limites de tamanho do GitHub. Coloque seus arquivos originais na pasta `inputs/` e execute `python map_converter.py` para gerar o `.mcworld` localmente.
+> **Aviso sobre Arquivos Pesados**: Arquivos binários pesados (`*.zip`, `*.mcworld` >50–100 MB) estão excluídos do repositório Git via `.gitignore` para respeitar os limites de tamanho do GitHub. Coloque seus arquivos originais na pasta `inputs/` e execute o pipeline para gerar o `.mcworld` localmente.
 
 ---
 
@@ -132,29 +138,52 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
 
 ```text
 map-convertion/
-├── .gitignore                       # Ignora temporários, backups e mundos pesados (*.zip, *.mcworld)
+├── .gitignore                       # Ignora temporários e mundos pesados (*.zip, *.mcworld, *.mcpack)
 ├── LICENSE                          # Licença MIT (Copyright 2026 João Lucas Mayrinck)
 ├── README.md                        # Documentação bilíngue completa (EN/PT)
-├── requirements.txt                 # Dependências Python (nbtlib, Pillow)
-├── map_converter.py                 # CLI e script principal de conversão
+├── requirements.txt                 # Dependências Python (nbtlib, amulet-leveldb, Pillow)
+├── CONVERSION_REPORT.md             # Relatório consolidado final da conversão
 │
-├── dist/                            # Diretório de saída dos entregáveis compilados (.mcworld, .mcpack)
-│   └── .gitkeep
+├── converter/                       # Módulos Python desacoplados da arquitetura de conversão
+│   ├── world/                       # Anvil MCA, LevelDB nativo C++ e sincronização de inventários
+│   ├── commands/                    # Tradutor de sintaxe de comandos Java -> Bedrock
+│   ├── behavior_pack/               # Gerador de funções, entidades, trading e loot tables
+│   └── resource_pack/               # Mapeamento de texturas, terrain atlas e variações
+│
+├── scripts/                         # Fases modulares automatizadas (1 a 12)
+│   ├── phase1_analyze_world.py      # Fase 1: Extração e inspeção do mundo Java
+│   ├── phase2_extract_command_blocks.py # Fase 2: Varredura de MCA e conexões em cadeia
+│   ├── phase3_inventory_commands.py # Fase 3: Inventário de comandos e compatibilidade
+│   ├── phase4_analyze_resources.py  # Fase 4: Análise de texturas, blockstates e áudios
+│   ├── phase5_to_9_convert_all.py   # Fases 5-9: Conversão RP/BP, LevelDB e inventários
+│   ├── phase10_validate.py          # Fase 10: Motor de validação automática (0 inconformidades)
+│   ├── phase11_package.py           # Fase 11: Empacotamento (.mcworld, .mcaddon, .mcpack)
+│   └── phase12_report.py            # Fase 12: Geração de CONVERSION_REPORT.md
+│
+├── inputs/                          # Arquivos de entrada (apenas o mundo Java)
+│   ├── java-version.zip             # Mundo Java original (.zip)
+│   └── README.md                    # Instruções de uso dos arquivos de entrada
+│
+├── expected/                        # Arquivos de exemplo e referência externa (gabarito)
+│   ├── bedrock-version.mcworld      # Template de referência do Chunker
+│   ├── maze-runner-resource-pack.mcpack # Resource Pack de referência do MinecraftMaps
+│   └── README.md                    # Documentação de referência
+│
+├── output/                          # Diretório oficial dos artefatos Bedrock compilados
+│   ├── converted_map.mcworld        # Mundo final completo pronto para PC e celular
+│   ├── converted_map.mcaddon        # Addon unificado (BP + RP)
+│   ├── converted_behavior_pack.mcpack # Behavior Pack avulso
+│   └── converted_resource_pack.mcpack # Resource Pack avulso
 │
 ├── docs/                            # Manuais técnicos e guias de arquitetura
-│   ├── INSTRUCOES_INSTALACAO_E_USO.md      # Guia de instalação, testes e instruções para PC e celular
-│   ├── ARQUITETURA_DE_CONVERSAO.md         # Explicação da arquitetura do pipeline
-│   ├── GUIA_AUDITORIA_DE_MUNDOS.md         # Guia de leitura e auditoria de regiões MCA e NBT
-│   ├── GUIA_TRADUCAO_COMANDOS.md           # Mapeamento de sintaxe de comandos Java -> Bedrock
-│   └── LIMITACOES_TECNICAS_JAVA_BEDROCK.md # Comparativo e limitações técnicas das duas engines
-│
-├── inputs/                          # Diretório para os arquivos de entrada
-│   └── README.md                    # Instruções para download e posicionamento dos mundos
-│
-├── packs/                           # Diretório de saída dos pacotes descompactados para edição
-│   └── .gitkeep
+│   ├── INSTRUCOES_INSTALACAO_E_USO.md # Guia completo para PC e Celular (Android/iOS)
+│   ├── ARQUITETURA_DE_CONVERSAO.md
+│   ├── GUIA_AUDITORIA_DE_MUNDOS.md
+│   ├── GUIA_TRADUCAO_COMANDOS.md
+│   └── LIMITACOES_TECNICAS_JAVA_BEDROCK.md
 │
 └── tests/                           # Suíte de testes automatizados
+    ├── test_modular_pipeline.py     # Testes da arquitetura modular
     └── test_conversion.py           # Testes unitários do motor de conversão
 ```
 
@@ -165,7 +194,7 @@ Todos os guias técnicos e manuais de operação estão centralizados no diretó
 - 📱 [**Instruções de Instalação, Ativação e Uso (PC e Celular Android / iOS)**](docs/INSTRUCOES_INSTALACAO_E_USO.md)
 - 🛠️ [**Arquitetura Técnica de Conversão do Pipeline**](docs/ARQUITETURA_DE_CONVERSAO.md)
 - 📊 [**Guia de Auditoria de Mundos e Entidades (Anvil MCA, NBT, Playerdata)**](docs/GUIA_AUDITORIA_DE_MUNDOS.md)
-- 📜 [**Guia de Tradução de Comandos (Java $\rightarrow$ Bedrock 1.26.40)**](docs/GUIA_TRADUCAO_COMANDOS.md)
+- 📜 [**Guia de Tradução de Comandos (Java $\rightarrow$ Bedrock 1.20+/1.21+)**](docs/GUIA_TRADUCAO_COMANDOS.md)
 - ⚠️ [**Limitações Técnicas e Diferenças de Engine (Java vs Bedrock)**](docs/LIMITACOES_TECNICAS_JAVA_BEDROCK.md)
 
 ---

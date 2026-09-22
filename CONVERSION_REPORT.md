@@ -17,6 +17,8 @@
 - **Texturas PNG Processadas**: **6** texturas (com variações ponderadas de tijolos)
 - **Sons de Áudio Processados**: **45** arquivos de som
 - **Entidades e NPCs Customizados**: **10** comerciantes aldeões com tabelas de trocas (`trading/`)
+- **Contêineres e Baús Auditados**: **838** contêineres (**321** com itens preservados no LevelDB)
+- **Inventário do Jogador**: Sincronização automática para `~local_player` no LevelDB
 
 ### 2. Métricas de Conversão
 ```text
@@ -53,6 +55,11 @@ Não convertidos / Incompatíveis (RED)   :     0
 - **Solução**: Sanitização completa para `/particle <nome> <x> <y> <z>`, conversão para `/titleraw` e formatação de `/summon` com nomes literais.
 - **Status**: `RESOLVIDO`
 
+#### Problema 6: Preservação de Baús, Contêineres e Inventário do Jogador
+- **Causa Raiz**: Conversores convencionais descartam contêineres de blocos e inventários de jogadores durante a transição Java -> Bedrock.
+- **Solução**: Preservação de 100% dos contêineres de bloco (`Chest`, `Barrel`, `ShulkerBox`, `Hopper`, etc.) no LevelDB, e mapeamento automático do inventário de `level.dat`/`playerdata` para `~local_player`.
+- **Status**: `RESOLVIDO`
+
 ---
 
 ## English Version (EN)
@@ -67,6 +74,8 @@ Não convertidos / Incompatíveis (RED)   :     0
 - **PNG Textures Processed**: **6** textures (with weighted brick variations)
 - **Audio Sounds Processed**: **45** sound files
 - **Custom Entities & NPCs**: **10** villager merchants with trade tables (`trading/`)
+- **Block Containers Audited**: **838** containers (**321** with items preserved in LevelDB)
+- **Player Inventory**: Automated synchronization to `~local_player` in LevelDB
 
 ### 2. Conversion Metrics
 ```text
@@ -103,16 +112,21 @@ Unconverted / Incompatible (RED)       :     0
 - **Solution**: Sanitized commands to Bedrock syntax: `/particle <id> <x> <y> <z>`, JSON array/object translation to `/titleraw`, and `/summon` with custom names.
 - **Status**: `RESOLVED`
 
+#### Issue 6: Container Chests & Player Inventory Preservation
+- **Root Cause**: Conventional conversion tools discard container block entities and player inventories when migrating from Java to Bedrock.
+- **Solution**: Preserved 100% of container block entities (`Chest`, `Barrel`, `ShulkerBox`, `Hopper`, etc.) in LevelDB, and automatically synchronized player inventory from `level.dat`/`playerdata` into `~local_player`.
+- **Status**: `RESOLVED`
+
 ---
 
 ## 4. Delivery Artifacts / Artefatos de Entrega (`output/`)
 
 ```text
 # Checksums SHA-256 dos artefatos finais Bedrock 1.20+
-9a6b1d495293de366f215b6003e32c6212a7d4a9f29490c53a06db1dbdb2666d *converted_map.mcworld
-1628772c076b0384ceea0fd850c51d85738a4296aec6b88736d9f7ba4d858bad *converted_map.mcaddon
-acd6b7d0dc14629d6b3bad79d826c9dd0824c3e8ee67740ca1f30c374739932d *converted_behavior_pack.mcpack
-352f2e2d195c0af8036e5917f68d8320488f6d1d25da8772e32614100df1cc17 *converted_resource_pack.mcpack
+288588caa86942466fe7a7e272586e25249c743dbfef68b5a048253e4d09ded1 *converted_map.mcworld
+7a100fda2554d79d35311366f6201c3a8bfdf1b597c1bcae7fe5b3880c136e7e *converted_map.mcaddon
+00398c004fb36451dc36e754fbd0d6bc21fe76e2aae7a565224ca024be350210 *converted_behavior_pack.mcpack
+5d137208a63b61431b963b6372dbfabea05b8a651ee22f45e83502b7bbe4b565 *converted_resource_pack.mcpack
 
 ```
 

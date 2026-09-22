@@ -6,6 +6,7 @@ __pycache__/
 # Temporary / intermediate build files
 work_bedrock/
 temp_*/
+scratch/
 *.tmp
 *.bak
 *.bak.tmp
