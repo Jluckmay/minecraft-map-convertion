@@ -15,6 +15,8 @@ class ResourcePackGenerator:
 
     @staticmethod
     def generate(source_rp_dir: str, target_rp_dir: str, world_name: str, safe_name: str) -> Dict[str, Any]:
+        if os.path.exists(target_rp_dir):
+            shutil.rmtree(target_rp_dir, ignore_errors=True)
         os.makedirs(target_rp_dir, exist_ok=True)
         tex_dir = os.path.join(target_rp_dir, "textures", "blocks")
         os.makedirs(tex_dir, exist_ok=True)
@@ -26,6 +28,10 @@ class ResourcePackGenerator:
             import zipfile
             with zipfile.ZipFile(mm_pack, "r") as z:
                 z.extractall(target_rp_dir)
+            # Remove blocks.json residual se houver para não quebrar rendering vanilla
+            b_json = os.path.join(target_rp_dir, "blocks.json")
+            if os.path.exists(b_json):
+                os.remove(b_json)
             with open(os.path.join(target_rp_dir, "manifest.json"), "r", encoding="utf-8") as f:
                 man = json.load(f)
             return {

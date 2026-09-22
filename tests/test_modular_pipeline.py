@@ -86,6 +86,27 @@ class TestModularConverterPipeline(unittest.TestCase):
         self.assertEqual(trades[0]["gives"][0]["item"], "diamond")
         self.assertEqual(trades[0]["gives"][0]["quantity"], 1)
 
+    def test_translator_particle_conversion(self):
+        """Testa tradução de /particle com múltiplos argumentos Java para sintaxe Bedrock."""
+        cmd = "/particle cloud 176.1 64 -2144.1 0 14 0 0.03 500 force"
+        res = CommandTranslator.translate(cmd)
+        self.assertEqual(res, "particle minecraft:basic_smoke_particle 176.1 64 -2144.1")
+
+    def test_translator_title_array_to_titleraw(self):
+        """Testa conversão de title com JSON array para titleraw com rawtext."""
+        cmd = '/title @a title ["",{"text":"Day ","color":"gray"},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]'
+        res = CommandTranslator.translate(cmd)
+        self.assertTrue(res.startswith("titleraw @a title"))
+        self.assertIn('"rawtext"', res)
+        self.assertIn("§7Day ", res)
+        self.assertIn('"score"', res)
+
+    def test_translator_summon_custom_name(self):
+        """Testa conversão de summon com CustomName para sintaxe Bedrock com nametag."""
+        cmd = 'summon villager 264 59 -2184 {CustomName:\'{"text":"Bruce"}\'}'
+        res = CommandTranslator.translate(cmd)
+        self.assertEqual(res, 'summon villager "Bruce" 264 59 -2184')
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
 

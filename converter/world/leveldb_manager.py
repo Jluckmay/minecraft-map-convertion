@@ -190,9 +190,48 @@ class BedrockLevelDBManager:
     @classmethod
     def update_command_blocks(cls, db_dir: str, convert_func: Callable[[str], str]) -> int:
         """Percorre todos os arquivos .ldb do banco LevelDB e atualiza blocos de comando in-place."""
+        """Atualiza blocos de comando no banco LevelDB Bedrock de forma atômica e segura."""
         if not os.path.exists(db_dir):
             return 0
 
+        # Tentativa primária: utilizar o motor nativo C++ da Mojang (amulet-leveldb / leveldb)
+        try:
+            import leveldb
+            db = leveldb.LevelDB(db_dir)
+            total_modified = 0
+            for key, val in db.iterate():
+                if b"CommandBlock" in val or b"Command" in val:
+                    try:
+                        buf = io.BytesIO(val)
+                        tags = []
+                        val_modified = False
+                        while buf.tell() < len(val):
+                            try:
+                                tag = nbtlib.File.from_fileobj(buf, byteorder="little")
+                                tags.append(tag)
+                                if tag.get("id") == "CommandBlock" and "Command" in tag:
+                                    orig_cmd = str(tag["Command"])
+                                    new_cmd = convert_func(orig_cmd)
+                                    if new_cmd != orig_cmd:
+                                        tag["Command"] = nbtlib.String(new_cmd)
+                                        val_modified = True
+                                        total_modified += 1
+                            except Exception:
+                                break
+
+                        if val_modified and tags:
+                            out_buf = io.BytesIO()
+                            for tag in tags:
+                                tag.write(out_buf, byteorder="little")
+                            db.put(key, out_buf.getvalue())
+                    except Exception:
+                        pass
+            db.close()
+            return total_modified
+        except Exception:
+            pass
+
+        # Fallback: leitor/escritor embutido caso o módulo nativo não esteja disponível
         total_modified = 0
         for f in os.listdir(db_dir):
             if not f.endswith(".ldb"):

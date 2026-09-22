@@ -10,6 +10,8 @@ import json
 import zipfile
 import shutil
 import re
+import io
+import nbtlib
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if BASE_DIR not in sys.path:
@@ -104,6 +106,28 @@ def main():
         json.dump(world_bp, f, indent=2)
     with open(os.path.join(target_world, "world_resource_packs.json"), "w", encoding="utf-8") as f:
         json.dump(world_rp, f, indent=2)
+
+    # 4. Ativação de cheats, command blocks e pacotes no level.dat
+    level_dat = os.path.join(target_world, "level.dat")
+    if os.path.exists(level_dat):
+        try:
+            with open(level_dat, "rb") as fp:
+                ld_raw = fp.read()
+            if len(ld_raw) > 8:
+                header = ld_raw[:8]
+                ld_nbt = nbtlib.File.from_fileobj(io.BytesIO(ld_raw[8:]), byteorder="little")
+                ld_nbt["commandblocksenabled"] = nbtlib.Byte(1)
+                ld_nbt["commandsEnabled"] = nbtlib.Byte(1)
+                ld_nbt["hasLockedBehaviorPack"] = nbtlib.Byte(1)
+                ld_nbt["hasLockedResourcePack"] = nbtlib.Byte(1)
+                ld_nbt["texturePacksRequired"] = nbtlib.Byte(1)
+                out_ld = io.BytesIO()
+                ld_nbt.write(out_ld, byteorder="little")
+                with open(level_dat, "wb") as fp:
+                    fp.write(header + out_ld.getvalue())
+                print("    [OK] Cheats, command blocks e pacotes ativados com sucesso em level.dat")
+        except Exception as e:
+            print(f"    [!] Aviso ao atualizar level.dat: {e}")
 
     print("\n=================================================================")
     print(" FASES 5 A 9 CONCLUÍDAS COM SUCESSO!")

@@ -102,13 +102,15 @@ def validate_textures(rp_dir: str):
         if "bedrock" not in tt.get("texture_data", {}):
             issues.append("Chave 'bedrock' ausente em terrain_texture.json")
 
+    # No padrão MinecraftMaps, blocks.json é intencionalmente omitido para evitar sobrescrever a definição vanilla do bloco bedrock
     blocks_path = os.path.join(rp_dir, "blocks.json")
-    if not os.path.exists(blocks_path):
-        issues.append("blocks.json não encontrado no RP")
+    if os.path.exists(blocks_path):
+        issues.append("Aviso: blocks.json presente no RP (pode sobrescrever blocos vanilla no Bedrock 1.20+)")
 
+    b0_path = os.path.join(rp_dir, "textures", "blocks", "bedrock_0.png")
     fb_path = os.path.join(rp_dir, "textures", "blocks", "bedrock.png")
-    if not os.path.exists(fb_path):
-        issues.append("Fallback textures/blocks/bedrock.png não encontrado no RP")
+    if not os.path.exists(b0_path) and not os.path.exists(fb_path):
+        issues.append("Nenhuma textura bedrock encontrada em textures/blocks/ (nem bedrock_0.png nem bedrock.png)")
 
     return issues
 

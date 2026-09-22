@@ -9,6 +9,7 @@ import json
 import re
 import uuid
 import zipfile
+import shutil
 from typing import Dict, Any, List, Set
 from converter.commands.translator import CommandTranslator
 
@@ -67,6 +68,8 @@ class BehaviorPackGenerator:
 
     @classmethod
     def generate(cls, datapacks_dir: str, target_bp_dir: str, world_name: str, safe_name: str, rp_header_uuid: str) -> Dict[str, Any]:
+        if os.path.exists(target_bp_dir):
+            shutil.rmtree(target_bp_dir, ignore_errors=True)
         os.makedirs(target_bp_dir, exist_ok=True)
         func_dir = os.path.join(target_bp_dir, "functions")
         os.makedirs(func_dir, exist_ok=True)
@@ -219,16 +222,34 @@ class BehaviorPackGenerator:
             "tickingarea add 250 0 -2250 350 120 -2150 maze_spawn",
             "tickingarea add 250 0 -2450 350 120 -2350 maze_north",
             "tickingarea add 450 0 -2250 550 120 -2050 maze_east",
+            "# Ticking areas permanentes cobrindo todos os portões, levers e blocos de comando",
+            "tickingarea add 100 0 -2460 350 120 -2420 maze_doors_north",
+            "tickingarea add 100 0 -1865 350 120 -1820 maze_doors_south",
+            "tickingarea add 490 0 -2260 540 120 -2040 maze_doors_east",
+            "tickingarea add -95 0 -2260 -55 120 -2040 maze_doors_west",
+            "tickingarea add 150 0 -2260 350 120 -2040 maze_center_clones",
+            "tickingarea add -280 0 -2320 -150 120 -2180 maze_cmd_blocks",
+            "gamerule commandblockoutput false",
+            "gamerule sendcommandfeedback true",
+            "gamerule doimmediaterespawn true",
+            "gamerule domobspawning false",
             "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add dayCounter dummy",
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players set #world {safe_name}_initialized 1",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
+        init_content = "\n".join(init_lines) + "\n"
         with open(os.path.join(world_func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(init_lines) + "\n")
+            f.write(init_content)
         with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(init_lines) + "\n")
+            f.write(init_content)
+        custom_func_dir = os.path.join(func_dir, "custom")
+        os.makedirs(custom_func_dir, exist_ok=True)
+        with open(os.path.join(custom_func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
+            f.write(init_content)
 
         tick_lines = [
             f"scoreboard objectives add {safe_name}_initialized dummy",
@@ -236,6 +257,9 @@ class BehaviorPackGenerator:
         ]
         with open(os.path.join(func_dir, "tick.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(tick_lines) + "\n")
+        # tick.json DEVE estar em functions/tick.json no Bedrock
+        with open(os.path.join(func_dir, "tick.json"), "w", encoding="utf-8") as f:
+            json.dump({"values": ["tick"]}, f, indent=2)
         with open(os.path.join(target_bp_dir, "tick.json"), "w", encoding="utf-8") as f:
             json.dump({"values": ["tick"]}, f, indent=2)
 

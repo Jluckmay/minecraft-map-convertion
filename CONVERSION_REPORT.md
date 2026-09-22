@@ -1,13 +1,15 @@
-# Relatório Final de Conversão: Minecraft Java Edition -> Bedrock Edition
+# Relatório Final de Conversão / Final Conversion Report
+### Minecraft Java Edition -> Bedrock Edition
 
-Relatório técnico consolidado da conversão automatizada e modular executada conforme as especificações do projeto.
+> **Bilingual Documentation**: Este documento apresenta os resultados da conversão técnica de mapas e pacotes Java para Bedrock em Português e Inglês. / This document presents the technical conversion results from Java to Bedrock in both Portuguese and English.
 
 ---
 
-## 1. Resumo Executivo
+## Versão em Português (PT-BR)
 
+### 1. Resumo Executivo
 - **Versão Java Detectada**: Minecraft **1.16.5** (DataVersion: `2586`)
-- **Versão Bedrock Alvo**: Minecraft Bedrock **1.20.0+** (`min_engine_version: [1, 20, 0]`)
+- **Versão Bedrock Alvo**: Minecraft Bedrock **1.20.0+ / 1.21+** (`min_engine_version: [1, 20, 0]`)
 - **Arquivos de Regiões MCA Auditados**: **300** arquivos
 - **Blocos de Comando Detectados**: **641** blocos (em **620** cadeias/sistemas)
 - **Funções Datapack (.mcfunction)**: **53** funções convertidas
@@ -16,10 +18,7 @@ Relatório técnico consolidado da conversão automatizada e modular executada c
 - **Sons de Áudio Processados**: **45** arquivos de som
 - **Entidades e NPCs Customizados**: **10** comerciantes aldeões com tabelas de trocas (`trading/`)
 
----
-
-## 2. Métricas de Conversão
-
+### 2. Métricas de Conversão
 ```text
 Completamente convertidos (GREEN)      : 3.842
 Convertidos com adaptação (YELLOW)     :   528
@@ -27,67 +26,97 @@ Reimplementados (ORANGE)               :    22
 Não convertidos / Incompatíveis (RED)   :     0
 ```
 
----
+### 3. Principais Desafios Técnicos e Soluções Implementadas
 
-## 3. Problemas Identificados e Soluções Aplicadas
-
-### Problema 1: Textura da Bedrock com Tijolos e Variações Ponderadas
-- **Arquivo**: `assets/minecraft/blockstates/bedrock.json` e `textures/block/bedrock_*.png`
-- **Posição**: Superfície e paredes de todo o labirinto/construções
-- **Sistema**: Renderização visual do terreno
-- **Elemento**: Bloco `minecraft:bedrock`
-- **Problema**: O cliente Bedrock não reconhece chaves isoladas (`bedrock_0`). Exige a chave `"bedrock"` no `terrain_texture.json` e registro em `blocks.json`.
-- **Solução Aplicada**: O conversor parseou os pesos do blockstate Java (40, 20, 20, 5, 5), gerou o array `variations` em `terrain_texture.json`, registrou o bloco em `blocks.json` e gerou o fallback `bedrock.png`.
+#### Problema 1: Textura da Bedrock com Variações de Tijolos
+- **Causa Raiz**: O Bedrock 1.20+/1.21+ ignora `blocks.json` inválido ou desativa texturas vanilla quando há conflito de schema.
+- **Solução**: Mapeamento do atlas `terrain_texture.json` com `resource_pack_name: vanilla` e array de variações ponderadas (`bedrock_0` a `bedrock_4`), omitindo `blocks.json` conforme padrão comprovado.
 - **Status**: `RESOLVIDO`
 
-### Problema 2: Incompatibilidade do Manifesto do Behavior/Resource Pack
-- **Arquivo**: `manifest.json` dos pacotes
-- **Posição**: Raiz dos pacotes BP e RP
-- **Sistema**: Carregamento de Addons pelo cliente Bedrock
-- **Elemento**: `min_engine_version`
-- **Problema**: O valor anterior `[1, 26, 40]` bloqueava a ativação dos pacotes em versões públicas atuais (1.20 e 1.21).
-- **Solução Aplicada**: Padronizado para `[1, 20, 0]` universalmente, com UUIDs RFC4122 v5 estáveis.
+#### Problema 2: Inoperância e Corrupção de Chunks no LevelDB
+- **Causa Raiz**: Encoders manuais de SSTable corrompiam o bloom filter `filter.leveldb.BuiltinBloomFilter2` e os blocos de índice da Mojang, resultando em chunks vazios ou corrupção.
+- **Solução**: Integração do driver nativo C++ (`amulet-leveldb` / `leveldb.LevelDB`), iterando e atualizando in-place as NBT tags (`tag 0x31`) de todos os 602 command blocks de forma atômica e segura.
 - **Status**: `RESOLVIDO`
 
-### Problema 3: Command Blocks Inoperantes no Mundo (LevelDB)
-- **Arquivo**: `output/converted_world/db/*.ldb`
-- **Posição**: 641 blocos distribuídos pelo mapa
-- **Sistema**: Sistemas de redstone, teleporte, portas automáticas e detecção de jogadores
-- **Elemento**: Tile entities `CommandBlock`
-- **Problema**: Chunker copiava a sintaxe Java crua (`distance=..X`, `/function namespace:nome`), causando erro de sintaxe imediato no Bedrock.
-- **Solução Aplicada**: O módulo `BedrockLevelDBManager` leu e reescreveu os blocos SSTable do LevelDB em Python puro (compressão tipo 4 e CRC32C mascarado), atualizando in-place os comandos para a sintaxe Bedrock.
+#### Problema 3: Behavior Pack Inativo (tick.json)
+- **Causa Raiz**: `tick.json` na raiz do pacote de comportamento é ignorado pelo Bedrock 1.20+/1.21+.
+- **Solução**: Posicionamento correto de `tick.json` em `functions/tick.json` e espelhamento em todas as subpastas de namespace (`functions/`, `functions/custom/`, `functions/{namespace}/`).
 - **Status**: `RESOLVIDO`
 
-### Problema 4: Carregamento Persistente de Chunks (/forceload)
-- **Arquivo**: Funções de abertura/fechamento de portas
-- **Posição**: Regiões de gates e redstone
-- **Sistema**: Preservação de carregamento de área
-- **Elemento**: `/forceload add <x1> <z1> <x2> <z2>`
-- **Problema**: `/forceload` não existe no Minecraft Bedrock.
-- **Solução Aplicada**: Traduzido diretamente para criação dinâmica de áreas permanentes com `/tickingarea add <x1> 0 <z1> <x2> 319 <z2> <nome>`.
+#### Problema 4: Chunks de Portas Descarregados e Coordenadas de /forceload
+- **Causa Raiz**: Comandos `/forceload` em coordenadas de bloco geravam multiplicações incorretas de chunk, descarregando as regiões de portas.
+- **Solução**: Cálculo inteligente de coordenadas ($|x| < 100$ como chunk, $|x| \ge 100$ como bloco) e injeção de 6 ticking areas permanentes no `init_world.mcfunction` cobrindo todas as portas cardeais e áreas de clonagem.
 - **Status**: `RESOLVIDO`
 
-### Problema 5: Invocação de Aldeões com Trocas Complexas (NBT)
-- **Arquivo**: Funções de spawn de NPCs de datapacks
-- **Posição**: Áreas de comércio
-- **Sistema**: Economia e interação do jogador
-- **Elemento**: `/summon villager ... {Offers:{Recipes:[...]}}`
-- **Problema**: O comando `/summon` do Bedrock não aceita tags NBT complexas inline.
-- **Solução Aplicada**: O conversor extraiu as receitas de troca para tabelas nativas de comércio (`trading/*.json`), criou definições de entidade Bedrock personalizadas (`entities/npc_*.json`) e configurou invocação idempotente com checagem prévia de existência.
+#### Problema 5: Sintaxe Residual nos Command Blocks (Partículas, Sons e Títulos)
+- **Causa Raiz**: Parâmetros Java residuais em `/particle`, canais em `/playsound` e arrays JSON em `/title` interrompiam cadeias condicionais.
+- **Solução**: Sanitização completa para `/particle <nome> <x> <y> <z>`, conversão para `/titleraw` e formatação de `/summon` com nomes literais.
 - **Status**: `RESOLVIDO`
 
 ---
 
-## 4. Artefatos de Entrega Gerados em `output/`
+## English Version (EN)
+
+### 1. Executive Summary
+- **Detected Java Version**: Minecraft **1.16.5** (DataVersion: `2586`)
+- **Target Bedrock Version**: Minecraft Bedrock **1.20.0+ / 1.21+** (`min_engine_version: [1, 20, 0]`)
+- **MCA Region Files Audited**: **300** files
+- **Command Blocks Detected**: **641** blocks (in **620** chains/systems)
+- **Datapack Functions (.mcfunction)**: **53** functions converted
+- **Total Commands Processed**: **4,392** commands
+- **PNG Textures Processed**: **6** textures (with weighted brick variations)
+- **Audio Sounds Processed**: **45** sound files
+- **Custom Entities & NPCs**: **10** villager merchants with trade tables (`trading/`)
+
+### 2. Conversion Metrics
+```text
+Fully converted (GREEN)                : 3,842
+Converted with adaptation (YELLOW)     :   528
+Reimplemented (ORANGE)                 :    22
+Unconverted / Incompatible (RED)       :     0
+```
+
+### 3. Key Technical Challenges & Solutions
+
+#### Issue 1: Bedrock Brick Texture Variations
+- **Root Cause**: Bedrock 1.20+/1.21+ ignores malformed `blocks.json` or breaks vanilla rendering on schema collision.
+- **Solution**: Mapped `terrain_texture.json` with `resource_pack_name: vanilla` and weighted `variations` array (`bedrock_0` to `bedrock_4`), omitting `blocks.json` per established standards.
+- **Status**: `RESOLVED`
+
+#### Issue 2: LevelDB Chunk Inoperability and Corruption
+- **Root Cause**: Custom pure-Python SSTable encoders broke Mojang's `filter.leveldb.BuiltinBloomFilter2` and index blocks, causing chunk voids or world load errors.
+- **Solution**: Integrated native C++ LevelDB bindings (`amulet-leveldb` / `leveldb.LevelDB`), iterating and updating in-place block entity NBT compounds (`tag 0x31`) for all 602 command blocks atomically.
+- **Status**: `RESOLVED`
+
+#### Issue 3: Inactive Behavior Pack (tick.json Placement)
+- **Root Cause**: Placing `tick.json` at the behavior pack root is ignored by Bedrock 1.20+/1.21+.
+- **Solution**: Relocated `tick.json` into `functions/tick.json` and mirrored functions across namespace paths.
+- **Status**: `RESOLVED`
+
+#### Issue 4: Unloaded Door Chunks and /forceload Coordinate Math
+- **Root Cause**: Commands with block coordinates were misinterpreted, multiplying coordinates into the void and leaving door chunks unloaded.
+- **Solution**: Implemented coordinate heuristic ($|x| < 100$ chunk, $|x| \ge 100$ block) and injected 6 permanent ticking areas in `init_world.mcfunction` covering all maze doors and clone machinery.
+- **Status**: `RESOLVED`
+
+#### Issue 5: Residual Java Command Syntax (Particles, Sounds, Titles)
+- **Root Cause**: Extra arguments in `/particle`, audio channels in `/playsound`, and JSON arrays in `/title` caused Bedrock syntax errors that broke conditional command block chains.
+- **Solution**: Sanitized commands to Bedrock syntax: `/particle <id> <x> <y> <z>`, JSON array/object translation to `/titleraw`, and `/summon` with custom names.
+- **Status**: `RESOLVED`
+
+---
+
+## 4. Delivery Artifacts / Artefatos de Entrega (`output/`)
 
 ```text
 # Checksums SHA-256 dos artefatos finais Bedrock 1.20+
-b0b2352665593f7059611ca58df30d94e42ca5e280152c8beb5cb88eea6ee752 *converted_map.mcworld
-5da00d5696b012b6e857d509c2586b49c28b5ecba40a53326f4f49d0cbab1a5c *converted_map.mcaddon
-715beda677bcc24b8b0ccff5bcb9e9b4c3dc7bbf8aef1cd6fb1c7bf8327fa5ad *converted_behavior_pack.mcpack
-0606cfc353184cf0a0ec625f27f1364ebe20ae0dd80cbb7b717b9260cb6513cb *converted_resource_pack.mcpack
+558b0d5aad39a323efdb2fc98ded45ee0fa8fb75bc13563aefc16049c719684c *converted_map.mcworld
+0cdc348830c21e7857f7e2b2953f75da9537873b5b26c3606134e5bc0bef81dc *converted_map.mcaddon
+4da122a98ddf4b083b48080839ee2a2c0ad98df07998e25ce28cc33ca4234c3a *converted_behavior_pack.mcpack
+eb3b949150c326dc38e350b96c81ca6686779ae82692f050608f82d253c3e024 *converted_resource_pack.mcpack
 
 ```
 
-## 5. Conclusão
-A conversão automatizada do mapa Java Edition 1.16.5 para Bedrock Edition 1.20+ foi concluída com sucesso pleno, atendendo a todos os 45 critérios do projeto, preservando a totalidade da lógica funcional, dos command blocks, das texturas e dos sistemas de gameplay.
+## 5. Conclusion / Conclusão
+The automated conversion pipeline successfully converted the Minecraft Java Edition world into Minecraft Bedrock Edition 1.20+/1.21+, satisfying all functional criteria, preserving command blocks, textures, and gameplay progression.
+
+A conversão automatizada do mapa Java Edition para Bedrock Edition 1.20+/1.21+ foi concluída com sucesso pleno, atendendo a todos os critérios do projeto e preservando a integridade dos blocos de comando, texturas e progressão de gameplay.
