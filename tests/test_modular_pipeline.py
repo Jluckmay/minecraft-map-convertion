@@ -103,10 +103,15 @@ class TestModularConverterPipeline(unittest.TestCase):
         self.assertIn('"score"', res)
 
     def test_translator_summon_custom_name(self):
-        """Testa conversão de summon com CustomName para sintaxe Bedrock com nametag."""
+        """Testa conversão de summon com CustomName para sintaxe Bedrock com entidade customizada e idempotência."""
         cmd = 'summon villager 264 59 -2184 {CustomName:\'{"text":"Bruce"}\'}'
         res = CommandTranslator.translate(cmd)
-        self.assertEqual(res, 'summon villager "Bruce" 264 59 -2184')
+        self.assertEqual(res, 'execute unless entity @e[type=custom:npc_bruce] run summon custom:npc_bruce 264 59 -2184')
+
+        # Para mob não aldeão, verifica sintaxe válida Bedrock com nametag
+        cmd_mob = 'summon zombie 264 59 -2184 {CustomName:\'{"text":"Boss"}\'}'
+        res_mob = CommandTranslator.translate(cmd_mob)
+        self.assertEqual(res_mob, 'summon zombie 264 59 -2184 0 0 "" "Boss"')
 
     def test_inventory_manager_create_bedrock_item(self):
         """Testa construção de item Bedrock a partir de dados Java."""

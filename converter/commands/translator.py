@@ -56,7 +56,13 @@ SOUND_MAP = {
     "minecraft:entity.zombie_horse.hurt": "mob.horse.zombie.hit",
     "entity.zombie_horse.hurt": "mob.horse.zombie.hit",
     "minecraft:ui.toast.challenge_complete": "random.levelup",
-    "ui.toast.challenge_complete": "random.levelup"
+    "ui.toast.challenge_complete": "random.levelup",
+    "minecraft:entity.illusioner.mirror_move": "entity.illusioner.mirror_move",
+    "entity.illusioner.mirror_move": "entity.illusioner.mirror_move",
+    "minecraft:entity.illusioner.prepare_mirror": "entity.illusioner.prepare_mirror",
+    "entity.illusioner.prepare_mirror": "entity.illusioner.prepare_mirror",
+    "minecraft:entity.illusioner.prepare_blind": "entity.illusioner.prepare_blind",
+    "entity.illusioner.prepare_blind": "entity.illusioner.prepare_blind"
 }
 
 PARTICLE_MAP = {
@@ -285,7 +291,22 @@ class CommandTranslator:
                 name_match = re.search(r'CustomName\s*:\s*\'(?:\{.*?"text"\s*:\s*"([^"]+)".*?\}|"([^"]+)")\'', nbt_part)
                 if name_match:
                     found_name = name_match.group(1) or name_match.group(2)
-                    return f"{prefix}{clean_type} \"{found_name}\" {x} {y} {z}"
+                    slug = re.sub(r'[^a-zA-Z0-9_]', '_', found_name.lower().replace("ö", "o").replace("ø", "o")).strip('_')
+                    slug_stripped = slug.replace("_", "")
+                    
+                    matched_npc = None
+                    if known_npcs:
+                        for cand in (slug, slug_stripped, found_name.lower()):
+                            if cand in known_npcs:
+                                matched_npc = cand
+                                break
+                    if not matched_npc and clean_type == "villager":
+                        matched_npc = slug
+
+                    if matched_npc:
+                        target_entity = f"{world_safe_name}:npc_{matched_npc}"
+                        return f"execute unless entity @e[type={target_entity}] run {prefix}{target_entity} {x} {y} {z}"
+                    return f"{prefix}{clean_type} {x} {y} {z} 0 0 \"\" \"{found_name}\""
                 return f"{prefix}{clean_type} {x} {y} {z}"
             return f"{prefix}{clean_type} {x} {y} {z}"
 

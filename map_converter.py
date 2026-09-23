@@ -1098,6 +1098,96 @@ class MapConverterApp:
                 with open(os.path.join(tex_dir, "terrain_texture.json"), "w", encoding="utf-8") as f:
                     json.dump(terrain_texture, f, indent=2)
 
+            # Sons e sound_definitions.json
+            sound_files = [n for n in namelist if "/sounds/" in n and n.endswith(".ogg")]
+            if sound_files:
+                sound_dir = os.path.join(self.rp_dir, "sounds")
+                os.makedirs(sound_dir, exist_ok=True)
+                for sf in sound_files:
+                    rel_s = sf.split("/sounds/")[-1]
+                    s_dest = os.path.join(sound_dir, rel_s)
+                    os.makedirs(os.path.dirname(s_dest), exist_ok=True)
+                    with open(s_dest, "wb") as f:
+                        f.write(z.read(sf))
+
+                sound_defs = {
+                    "format_version": "1.14.0",
+                    "sound_definitions": {
+                        "entity.illusioner.mirror_move": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/mirror_move1", "sounds/mob/illusion_illager/mirror_move2"]
+                        },
+                        "minecraft:entity.illusioner.mirror_move": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/mirror_move1", "sounds/mob/illusion_illager/mirror_move2"]
+                        },
+                        "mob.illusion_illager.mirror_move": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/mirror_move1", "sounds/mob/illusion_illager/mirror_move2"]
+                        },
+                        "entity.illusioner.prepare_mirror": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/prepare_mirror"]
+                        },
+                        "minecraft:entity.illusioner.prepare_mirror": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/prepare_mirror"]
+                        },
+                        "mob.illusion_illager.prepare_mirror": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/prepare_mirror"]
+                        },
+                        "entity.illusioner.prepare_blind": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/prepare_blind"]
+                        },
+                        "minecraft:entity.illusioner.prepare_blind": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/prepare_blind"]
+                        },
+                        "mob.illusion_illager.prepare_blind": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/illusion_illager/prepare_blind"]
+                        },
+                        "entity.skeleton_horse.death": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/horse/zombie/death"]
+                        },
+                        "mob.horse.skeleton.death": {
+                            "category": "neutral",
+                            "sounds": ["sounds/mob/horse/zombie/death"]
+                        },
+                        "entity.ghast.scream": {
+                            "category": "hostile",
+                            "sounds": ["sounds/mob/ghast/scream1", "sounds/mob/ghast/scream2", "sounds/mob/ghast/scream3", "sounds/mob/ghast/scream4", "sounds/mob/ghast/scream5"]
+                        },
+                        "mob.ghast.scream": {
+                            "category": "hostile",
+                            "sounds": ["sounds/mob/ghast/scream1", "sounds/mob/ghast/scream2", "sounds/mob/ghast/scream3", "sounds/mob/ghast/scream4", "sounds/mob/ghast/scream5"]
+                        },
+                        "entity.wither_skeleton.death": {
+                            "category": "hostile",
+                            "sounds": ["sounds/mob/wither_skeleton/death1", "sounds/mob/wither_skeleton/death2"]
+                        },
+                        "mob.wither_skeleton.death": {
+                            "category": "hostile",
+                            "sounds": ["sounds/mob/wither_skeleton/death1", "sounds/mob/wither_skeleton/death2"]
+                        },
+                        "block.end_portal.spawn": {
+                            "category": "block",
+                            "sounds": ["sounds/block/end_portal/endportal"]
+                        },
+                        "block.end_portal_frame.fill": {
+                            "category": "block",
+                            "sounds": ["sounds/block/end_portal/eyeplace1", "sounds/block/end_portal/eyeplace2", "sounds/block/end_portal/eyeplace3"]
+                        }
+                    }
+                }
+                with open(os.path.join(sound_dir, "sound_definitions.json"), "w", encoding="utf-8") as sf:
+                    json.dump(sound_defs, sf, indent=2)
+                with open(os.path.join(sound_dir, "sounds.json"), "w", encoding="utf-8") as sf:
+                    json.dump(sound_defs, sf, indent=2)
+
             # Loot tables
             loot_files = [n for n in namelist if "/loot_tables/" in n and n.endswith(".json")]
             for lf in loot_files:

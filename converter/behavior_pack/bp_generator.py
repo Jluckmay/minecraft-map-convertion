@@ -66,6 +66,45 @@ class BehaviorPackGenerator:
                 })
         return trades
 
+    @staticmethod
+    def convert_loot_table(java_loot: dict) -> dict:
+        """Converte uma tabela de loot Java para o formato Bedrock, preservando drops de esmeralda."""
+        b_pools = []
+        for p in java_loot.get("pools", []):
+            b_entries = []
+            for e in p.get("entries", []):
+                e_name = str(e.get("name", "")).replace("minecraft:", "")
+                functions = []
+                for f in e.get("functions", []):
+                    f_name = str(f.get("function", ""))
+                    if "set_count" in f_name:
+                        count = f.get("count", 1)
+                        if isinstance(count, dict):
+                            functions.append({
+                                "function": "set_count",
+                                "count": {"min": float(count.get("min", 1)), "max": float(count.get("max", 1))}
+                            })
+                        else:
+                            functions.append({"function": "set_count", "count": int(count)})
+                    elif "looting_enchant" in f_name:
+                        functions.append({
+                            "function": "looting_enchant",
+                            "count": f.get("count", {"min": 0.0, "max": 1.0})
+                        })
+
+                b_entries.append({
+                    "type": "item",
+                    "name": f"minecraft:{e_name}",
+                    "weight": int(e.get("weight", 1)),
+                    "functions": functions
+                })
+
+            b_pools.append({
+                "rolls": int(p.get("rolls", 1)) if isinstance(p.get("rolls"), (int, float)) else 1,
+                "entries": b_entries
+            })
+        return {"pools": b_pools}
+
     @classmethod
     def generate(cls, datapacks_dir: str, target_bp_dir: str, world_name: str, safe_name: str, rp_header_uuid: str) -> Dict[str, Any]:
         if os.path.exists(target_bp_dir):
@@ -140,9 +179,12 @@ class BehaviorPackGenerator:
                             name_match = re.search(r'CustomName\s*:\s*\'(?:\{.*?"text"\s*:\s*"([^"]+)".*?\}|"([^"]+)")\'', line_s)
                             if name_match:
                                 n_val = (name_match.group(1) or name_match.group(2)).lower()
-                                clean_id = re.sub(r'[^a-zA-Z0-9_]', '', n_val)
+                                clean_id = re.sub(r'[^a-zA-Z0-9_]', '_', n_val.replace("ö", "o").replace("ø", "o")).strip('_')
+                                clean_stripped = clean_id.replace("_", "")
                                 if clean_id:
                                     known_npcs.add(clean_id)
+                                    known_npcs.add(clean_stripped)
+                                    known_npcs.add(n_val)
                                     trades = cls.extract_trades_from_command(line_s)
                                     if trades:
                                         os.makedirs(trading_dir, exist_ok=True)
@@ -153,7 +195,6 @@ class BehaviorPackGenerator:
 
                                         # Cria definição de entidade customizada
                                         os.makedirs(entities_dir, exist_ok=True)
-                                        ent_file = os.path.join(entities_dir, f"npc_{clean_id}.json")
                                         ent_data = {
                                             "format_version": "1.16.0",
                                             "minecraft:entity": {
@@ -180,8 +221,11 @@ class BehaviorPackGenerator:
                                                 }
                                             }
                                         }
-                                        with open(ent_file, "w", encoding="utf-8") as ef:
+                                        with open(os.path.join(entities_dir, f"npc_{clean_id}.json"), "w", encoding="utf-8") as ef:
                                             json.dump(ent_data, ef, indent=2)
+                                        if clean_id != clean_stripped:
+                                            with open(os.path.join(entities_dir, f"npc_{clean_stripped}.json"), "w", encoding="utf-8") as ef:
+                                                json.dump(ent_data, ef, indent=2)
 
                 # Segundo passo: traduzir todas as funções e salvar em ambos os caminhos (namespaced e root)
                 for fname, lines in func_files:
@@ -213,7 +257,39 @@ class BehaviorPackGenerator:
                         rf.write(content_str)
                     converted_funcs += 1
 
-        # 3. Funções Utilitárias e Hooks de Tick com Tickingareas do Labirinto
+        # 3. Conversão e Cópia de Loot Tables de Entidades (Drops de Esmeraldas)
+        target_loot_dir = os.path.join(target_bp_dir, "loot_tables", "entities")
+        os.makedirs(target_loot_dir, exist_ok=True)
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+        # Fonte 1: Datapacks Java extraídos
+        if os.path.isdir(datapacks_dir):
+            for root, _, files in os.walk(datapacks_dir):
+                if "loot_tables" in root and "entities" in root:
+                    for lf in files:
+                        if lf.endswith(".json"):
+                            try:
+                                with open(os.path.join(root, lf), "r", encoding="utf-8") as f:
+                                    j_loot = json.load(f)
+                                b_loot = cls.convert_loot_table(j_loot)
+                                with open(os.path.join(target_loot_dir, lf), "w", encoding="utf-8") as f:
+                                    json.dump(b_loot, f, indent=2)
+                            except Exception:
+                                pass
+
+        # Fonte 2: Packs de referência (packs/*/loot_tables/entities)
+        packs_dir = os.path.join(base_dir, "packs")
+        if os.path.isdir(packs_dir):
+            for d in os.listdir(packs_dir):
+                ref_loot = os.path.join(packs_dir, d, "loot_tables", "entities")
+                if os.path.isdir(ref_loot):
+                    for lf in os.listdir(ref_loot):
+                        if lf.endswith(".json"):
+                            dst_f = os.path.join(target_loot_dir, lf)
+                            if not os.path.exists(dst_f):
+                                shutil.copyfile(os.path.join(ref_loot, lf), dst_f)
+
+        # 4. Funções Utilitárias e Hooks de Tick com Tickingareas do Labirinto
         world_func_dir = os.path.join(func_dir, safe_name)
         os.makedirs(world_func_dir, exist_ok=True)
 
@@ -227,7 +303,7 @@ class BehaviorPackGenerator:
             "tickingarea add 100 0 -1865 350 120 -1820 maze_doors_south",
             "tickingarea add 490 0 -2260 540 120 -2040 maze_doors_east",
             "tickingarea add -95 0 -2260 -55 120 -2040 maze_doors_west",
-            "tickingarea add 150 0 -2260 350 120 -2040 maze_center_clones",
+            "tickingarea add 200 0 -2210 290 120 -2140 maze_center_clones",
             "tickingarea add -280 0 -2320 -150 120 -2180 maze_cmd_blocks",
             "gamerule commandblockoutput false",
             "gamerule sendcommandfeedback true",
@@ -235,16 +311,16 @@ class BehaviorPackGenerator:
             "gamerule domobspawning false",
             "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add dayCounter dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "scoreboard players add #world dayCounter 0",
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players set #world {safe_name}_initialized 1",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
         init_content = "\n".join(init_lines) + "\n"
         with open(os.path.join(world_func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
-            f.write("\n".join(init_lines) + "\n")
             f.write(init_content)
         with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
-            f.write("\n".join(init_lines) + "\n")
             f.write(init_content)
         custom_func_dir = os.path.join(func_dir, "custom")
         os.makedirs(custom_func_dir, exist_ok=True)

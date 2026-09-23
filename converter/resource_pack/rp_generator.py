@@ -113,11 +113,170 @@ class ResourcePackGenerator:
         with open(os.path.join(target_rp_dir, "textures", "item_texture.json"), "w", encoding="utf-8") as f:
             json.dump(item_texture, f, indent=2)
 
-        # 5. Copia sons
+        # 5. Copia sons e gera sound_definitions.json (crítico para sons customizados e som do portão)
         sounds_src = os.path.join(source_rp_dir, "assets", "minecraft", "sounds")
         if os.path.isdir(sounds_src):
             sounds_dst = os.path.join(target_rp_dir, "sounds")
             shutil.copytree(sounds_src, sounds_dst, dirs_exist_ok=True)
+
+        # Geração de sound_definitions.json para garantir que o Bedrock reproduza os sons do portão e mobs
+        sound_defs = {
+            "format_version": "1.14.0",
+            "sound_definitions": {
+                "entity.illusioner.mirror_move": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/mirror_move1",
+                        "sounds/mob/illusion_illager/mirror_move2"
+                    ]
+                },
+                "minecraft:entity.illusioner.mirror_move": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/mirror_move1",
+                        "sounds/mob/illusion_illager/mirror_move2"
+                    ]
+                },
+                "mob.illusion_illager.mirror_move": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/mirror_move1",
+                        "sounds/mob/illusion_illager/mirror_move2"
+                    ]
+                },
+                "entity.illusioner.prepare_mirror": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/prepare_mirror"
+                    ]
+                },
+                "minecraft:entity.illusioner.prepare_mirror": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/prepare_mirror"
+                    ]
+                },
+                "mob.illusion_illager.prepare_mirror": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/prepare_mirror"
+                    ]
+                },
+                "entity.illusioner.prepare_blind": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/prepare_blind"
+                    ]
+                },
+                "minecraft:entity.illusioner.prepare_blind": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/prepare_blind"
+                    ]
+                },
+                "mob.illusion_illager.prepare_blind": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/illusion_illager/prepare_blind"
+                    ]
+                },
+                "entity.skeleton_horse.death": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/horse/zombie/death"
+                    ]
+                },
+                "mob.horse.skeleton.death": {
+                    "category": "neutral",
+                    "sounds": [
+                        "sounds/mob/horse/zombie/death"
+                    ]
+                },
+                "entity.ghast.scream": {
+                    "category": "hostile",
+                    "sounds": [
+                        "sounds/mob/ghast/scream1",
+                        "sounds/mob/ghast/scream2",
+                        "sounds/mob/ghast/scream3",
+                        "sounds/mob/ghast/scream4",
+                        "sounds/mob/ghast/scream5"
+                    ]
+                },
+                "mob.ghast.scream": {
+                    "category": "hostile",
+                    "sounds": [
+                        "sounds/mob/ghast/scream1",
+                        "sounds/mob/ghast/scream2",
+                        "sounds/mob/ghast/scream3",
+                        "sounds/mob/ghast/scream4",
+                        "sounds/mob/ghast/scream5"
+                    ]
+                },
+                "entity.wither_skeleton.death": {
+                    "category": "hostile",
+                    "sounds": [
+                        "sounds/mob/wither_skeleton/death1",
+                        "sounds/mob/wither_skeleton/death2"
+                    ]
+                },
+                "mob.wither_skeleton.death": {
+                    "category": "hostile",
+                    "sounds": [
+                        "sounds/mob/wither_skeleton/death1",
+                        "sounds/mob/wither_skeleton/death2"
+                    ]
+                },
+                "block.end_portal.spawn": {
+                    "category": "block",
+                    "sounds": [
+                        "sounds/block/end_portal/endportal"
+                    ]
+                },
+                "block.end_portal_frame.fill": {
+                    "category": "block",
+                    "sounds": [
+                        "sounds/block/end_portal/eyeplace1",
+                        "sounds/block/end_portal/eyeplace2",
+                        "sounds/block/end_portal/eyeplace3"
+                    ]
+                }
+            }
+        }
+        sounds_dir = os.path.join(target_rp_dir, "sounds")
+        os.makedirs(sounds_dir, exist_ok=True)
+        with open(os.path.join(sounds_dir, "sound_definitions.json"), "w", encoding="utf-8") as sf:
+            json.dump(sound_defs, sf, indent=2)
+        with open(os.path.join(sounds_dir, "sounds.json"), "w", encoding="utf-8") as sf:
+            json.dump(sound_defs, sf, indent=2)
+
+        # 6. Copia de entidades do cliente (renderização de texturas/modelos de NPCs no Bedrock)
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        packs_rp_ent = os.path.join(base_dir, "packs", f"{safe_name}_rp", "entity")
+        if not os.path.isdir(packs_rp_ent):
+            # Fallback para qualquer pasta em packs/ que contenha entity
+            for d in os.listdir(os.path.join(base_dir, "packs")):
+                cand = os.path.join(base_dir, "packs", d, "entity")
+                if os.path.isdir(cand):
+                    packs_rp_ent = cand
+                    break
+        if os.path.isdir(packs_rp_ent):
+            target_ent_dir = os.path.join(target_rp_dir, "entity")
+            os.makedirs(target_ent_dir, exist_ok=True)
+            for ef in os.listdir(packs_rp_ent):
+                if ef.endswith(".json"):
+                    src_f = os.path.join(packs_rp_ent, ef)
+                    dst_f = os.path.join(target_ent_dir, ef)
+                    shutil.copyfile(src_f, dst_f)
+                    # Cria aliases úteis para caracteres especiais como ø/o
+                    if ef == "npc_j_rn.entity.json":
+                        try:
+                            with open(src_f, "r", encoding="utf-8") as f:
+                                data = json.load(f)
+                            data["minecraft:client_entity"]["description"]["identifier"] = f"{safe_name}:npc_jorn"
+                            with open(os.path.join(target_ent_dir, "npc_jorn.entity.json"), "w", encoding="utf-8") as f:
+                                json.dump(data, f, indent=2)
+                        except Exception:
+                            pass
 
         return {
             "header_uuid": rp_header_uuid,
