@@ -259,6 +259,17 @@ class DatapackConverter:
         if s.startswith('/'):
             s = s[1:].strip()
 
+        # Suporte recursivo a execute ... run <subcommand>
+        if s.startswith("execute ") and " run " in s:
+            exec_prefix, run_cmd = s.split(" run ", 1)
+            exec_prefix = re.sub(r'distance=\.\.([0-9.]+)', r'r=\1', exec_prefix)
+            exec_prefix = re.sub(r'distance=([0-9.]+)\.\.([0-9.]+)', r'rm=\1,r=\2', exec_prefix)
+            exec_prefix = re.sub(r'distance=([0-9.]+)', r'r=\1', exec_prefix)
+            exec_prefix = exec_prefix.replace("in minecraft:overworld", "in overworld").replace("in minecraft:the_nether", "in nether").replace("in minecraft:the_end", "in the_end")
+            exec_prefix = re.sub(r'\bfunction ([a-zA-Z0-9_]+):([a-zA-Z0-9_/-]+)', r'function \1/\2', exec_prefix)
+            trans_inner = cls.convert_command(run_cmd, known_npcs, world_safe_name)
+            return f"{exec_prefix} run {trans_inner}"
+
         # 2. forceload -> tickingarea funcional
         if s.startswith("forceload add ") or s.startswith("forceload remove "):
             parts = s.split()
@@ -1275,7 +1286,16 @@ class MapConverterApp:
                     "minecraft:damage_sensor": {"triggers": [{"cause": "all", "deals_damage": False}]},
                     "minecraft:collision_box": {"width": 0.6, "height": 1.9},
                     "minecraft:nameable": {"always_show": True, "default_trigger": {"event": "minecraft:entity_born"}},
-                    "minecraft:trade_table": {"display_name": display_name, "table": f"trading/{key}_trades.json"},
+                    "minecraft:economy_trade_table": {
+                        "table": f"trading/{key}_trades.json",
+                        "convert_trades_economy": True
+                    },
+                    "minecraft:interact": {
+                        "interactions": [{
+                            "on_interact": {"filters": {"test": "is_family", "subject": "other", "value": "player"}},
+                            "open_trading": True
+                        }]
+                    },
                     "minecraft:movement": {"value": 0.0},
                     "minecraft:movement.basic": {},
                     "minecraft:physics": {}
@@ -1317,6 +1337,9 @@ class MapConverterApp:
             f"tickingarea add 0 0 0 0 319 0 {self.safe_name}_core",
             f"scoreboard objectives add {self.safe_name}_initialized dummy",
             f"scoreboard players set #world {self.safe_name}_initialized 1",
+            "scoreboard objectives add dayCounter dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "scoreboard players add #world dayCounter 0",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.20+!"}}]}}'
         ]
         with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:

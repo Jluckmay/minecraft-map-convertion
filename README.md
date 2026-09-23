@@ -30,16 +30,19 @@ This tool solves this problem by analyzing the Java world directly, converting d
 - **Custom Villager & NPC Conversion**:
   - Automatically parses Java NBT `Offers:{Recipes:[...]}` from summon commands in functions and command blocks.
   - Generates Bedrock Trade Tables (`trading/*.json`) preserving exact emerald costs, items, and quantities.
-  - Generates custom Behavior Pack entities (`entities/npc_*.json`) with damage immunity and fixed spatial positions.
+  - Generates custom Behavior Pack entities (`entities/npc_*.json`) with `economy_trade_table` and interaction components.
   - Generates Resource Pack client definitions (`entity/npc_*.entity.json`) with corresponding textures and geometries.
+  - Translates `/summon` commands to custom entity types and initializes `dayCounter` scoreboards for timed NPC spawns.
 - **Idempotent Command Conversion**:
   - Converts `.mcfunction` files to modern Bedrock 1.26.40 syntax.
   - Automatically wraps summon commands with `unless entity @e[type=...]` to ensure **zero duplication** upon repeated execution.
   - Converts JSON `/tellraw` commands into Bedrock `{"rawtext": [...]}` with embedded color formatting codes (`§a`, `§6`, etc.).
   - Translates sound event identifiers (e.g., `entity.player.levelup` $\rightarrow$ `random.levelup`).
-  - Converts `/forceload` into safe documentation and continuous simulation areas (`tickingarea`).
+  - Converts `/forceload` into safe documentation and continuous simulation areas (`tickingarea`) within the 100-chunk engine limit.
 - **Entity Loot Table Translation**:
-  - Automatically converts custom mob loot tables (pools, rolls, `set_count`, `looting_enchant`, `killed_by_player`) to Bedrock JSON format.
+  - Automatically converts custom mob loot tables to Bedrock JSON format, preserving custom emerald drops, count ranges, and looting enchantments (`looting_enchant`).
+- **Sound Definitions & Custom Audio**:
+  - Automatically generates the official `sounds/sound_definitions.json` catalog to map `/playsound` events (including Illusioner sliding stone gate effects, ghasts, and wither skeletons) to actual `.ogg` files.
 - **Embedded Resource Extraction**:
   - Extracts custom block textures and generates `terrain_texture.json`.
   - Converts `icon.png` into `world_icon.jpeg` and `pack_icon.png`.
@@ -109,16 +112,19 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
 - **Conversão Completa de NPCs e Comércio**:
   - Extrai as receitas NBT `{Offers:{Recipes:[...]}}` de comandos em funções e blocos de comando.
   - Gera tabelas de troca Bedrock (`trading/*.json`) preservando preços em esmeraldas, itens e quantidades.
-  - Cria entidades customizadas no Behavior Pack (`entities/npc_*.json`) com invulnerabilidade e posição travada.
+  - Cria entidades customizadas no Behavior Pack (`entities/npc_*.json`) com `economy_trade_table` e interações de troca.
   - Cria definições de cliente no Resource Pack (`entity/npc_*.entity.json`) com modelos e texturas correspondentes.
+  - Traduz invocações `/summon` para as entidades dedicadas e inicializa objetivos de `dayCounter` para spawns temporizados.
 - **Comandos Idempotentes**:
   - Converte `.mcfunction` para a sintaxe moderna do Bedrock 1.26.40.
   - Adiciona automaticamente a cláusula `unless entity @e[type=...]` para impedir duplicações mesmo se a função for acionada repetidamente.
   - Converte comandos `/tellraw` para a sintaxe Bedrock `{"rawtext": [...]}` com códigos de formatação de cores (`§a`, `§6`, etc.).
   - Traduz eventos de som (`entity.player.levelup` $\rightarrow$ `random.levelup`).
-  - Adapta `/forceload` para áreas contínuas (`tickingarea`) e documentação técnica.
+  - Adapta `/forceload` para áreas contínuas (`tickingarea`) respeitando o limite do motor de 100 chunks por área.
 - **Conversão de Tabelas de Saque (Loot Tables)**:
-  - Traduz as tabelas de saque de monstros (pools, rolls, looting, contagens) para o formato JSON do Bedrock.
+  - Traduz as tabelas de saque de monstros para o formato JSON do Bedrock, preservando drops extras de esmeraldas, multiplicadores de saque (`looting_enchant`) e contagens (`set_count`).
+- **Definições de Som e Áudio Personalizado**:
+  - Gera automaticamente o catálogo oficial `sounds/sound_definitions.json` (e `sounds.json`) mapeando eventos de `/playsound` (incluindo pedras deslizando do portão via Illusioner, ghasts e wither skeletons) para os arquivos `.ogg` correspondentes.
 - **Extração de Recursos e Texturas**:
   - Extrai texturas personalizadas de blocos e gera o arquivo `terrain_texture.json`.
   - Gera `world_icon.jpeg` e `pack_icon.png` a partir do `icon.png` original.

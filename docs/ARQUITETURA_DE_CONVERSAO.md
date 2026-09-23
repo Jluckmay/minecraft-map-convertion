@@ -72,6 +72,12 @@ Converte tabelas de saque de entidades de datapacks Java para o formato Bedrock:
 
 ---
 
+### 5. Catálogo de Definições de Áudio (`sound_definitions.json`)
+- O Bedrock Edition exige o registro formal de qualquer evento de som customizado no catálogo `sounds/sound_definitions.json` do Resource Pack.
+- Mapeia eventos sonoros como os do Illusioner (usados no Java para o efeito de pedra abrindo/fechando os portões), ghasts, cavalos-esqueleto e outros efeitos para os arquivos `.ogg` empacotados, evitando que comandos `/playsound` toquem em silêncio.
+
+---
+
 <a name="english-en"></a>
 ## English (EN)
 
@@ -106,4 +112,10 @@ Converts datapack mob loot tables from Java JSON to Bedrock JSON:
 - Translates Java `/tellraw` JSON objects into Bedrock `rawtext` syntax with embedded section color codes (`§a`, `§6`, etc.).
 - Translates Java sound events to Bedrock sound identifiers (`playsound`).
 - Adapts `/forceload` chunk loading into simulation areas (`tickingarea`).
+
+---
+
+### 5. Sound Definitions Catalog (`sound_definitions.json`)
+- Bedrock Edition requires explicit event registration in `sounds/sound_definitions.json` inside the Resource Pack for custom audio.
+- Binds sound events such as Illusioner effects (used in Java for sliding stone maze gate open/close audio), ghasts, and skeleton horses to local `.ogg` assets, preventing `/playsound` commands from producing silence.
 
