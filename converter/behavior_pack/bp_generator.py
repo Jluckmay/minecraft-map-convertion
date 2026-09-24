@@ -277,10 +277,6 @@ class BehaviorPackGenerator:
                                     trans = re.sub(r'matches\s+55\b', f'matches 55.. unless entity @e[type={safe_name}:npc_jorn]', trans)
                             converted_lines.append(trans)
 
-                    if "a_tp_spawn" in fname:
-                        converted_lines.insert(0, f"execute if score #world {safe_name}_initialized matches 0 run function {safe_name}/init_world")
-                        converted_lines.insert(0, f"execute unless block 286 100 -2168 daylight_detector run function {safe_name}/init_world")
-
                     if "generates_npc" in fname:
                         # Reordena para que tellraw execute antes de summon
                         # Isso garante que a mensagem execute antes de a entidade existir no mundo
@@ -358,6 +354,10 @@ class BehaviorPackGenerator:
             "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 10.0 1 0.03",
             "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            "scoreboard objectives add dayCounter dummy",
+            "scoreboard objectives add DAY_COUNTER dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             'titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
@@ -382,6 +382,10 @@ class BehaviorPackGenerator:
             "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 10.0 1 0.03",
             "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            "scoreboard objectives add dayCounter dummy",
+            "scoreboard objectives add DAY_COUNTER dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add DAY_COUNTER dayCounter 1",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter"
@@ -407,6 +411,7 @@ class BehaviorPackGenerator:
             "scoreboard objectives add day_timer dummy",
             "scoreboard objectives add is_night dummy",
             "scoreboard objectives add cycle_ran dummy",
+            f"scoreboard objectives add {safe_name}_initialized dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "scoreboard players add #world dayCounter 0",
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
@@ -422,7 +427,6 @@ class BehaviorPackGenerator:
             "setblock 286 100 -2168 daylight_detector",
             "setblock 287 100 -2168 daylight_detector_inverted",
             f"function {safe_name}/cycle_morning",
-            f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players set #world {safe_name}_initialized 1",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
@@ -435,8 +439,13 @@ class BehaviorPackGenerator:
         player_join_lines = [
             f"# {world_name} Player Join Handler",
             "tag @s add joined",
+            "scoreboard objectives add dayCounter dummy",
+            "scoreboard objectives add DAY_COUNTER dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @s dayCounter 0",
             "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            f"execute if score #world {safe_name}_initialized matches 0 run function {safe_name}/init_world",
             'titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             f'tellraw @s {{"rawtext":[{{"text":"§a[{world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
         ]
@@ -452,28 +461,36 @@ class BehaviorPackGenerator:
             f"execute unless score #world areas_added matches 1 run tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             f"scoreboard objectives add areas_added dummy",
             f"scoreboard players set #world areas_added 1",
-            f"# 2. Inicializacao automatica ao entrar no mundo (dispara assim que qualquer jogador entra e o chunk estiver pronto)",
+            f"# 2. Objetivos de placar e inicializacao automatica incondicional do DAY_COUNTER",
+            f"scoreboard objectives add dayCounter dummy",
+            f"scoreboard objectives add DAY_COUNTER dummy",
+            f"scoreboard objectives add day_timer dummy",
+            f"scoreboard objectives add is_night dummy",
+            f"scoreboard objectives add cycle_ran dummy",
             f"scoreboard objectives add {safe_name}_initialized dummy",
+            f"scoreboard players add DAY_COUNTER dayCounter 0",
+            f"scoreboard players add #world dayCounter 0",
+            f"execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            f"# 3. Inicializacao automatica do mundo ao entrar o primeiro jogador",
             f"scoreboard players add #world {safe_name}_initialized 0",
-            f"execute if entity @a if score #world {safe_name}_initialized matches 0 unless block 286 100 -2168 daylight_detector run function {safe_name}/init_world",
-            f"execute if entity @a if score #world {safe_name}_initialized matches 0 unless block 286 100 -2168 daylight_detector run function init_world",
-            f"execute if entity @a if score #world {safe_name}_initialized matches 0 if block 286 100 -2168 daylight_detector run scoreboard players set #world {safe_name}_initialized 1",
-            f"# 3. Sincronizacao continua do contador de dias",
-            "scoreboard players add @a dayCounter 0",
-            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
-            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            f"execute if entity @a if score #world {safe_name}_initialized matches 0 run function {safe_name}/init_world",
+            f"execute if entity @a if score #world {safe_name}_initialized matches 0 run function init_world",
+            f"# 4. Sincronizacao continua do contador de dias e boas-vindas",
+            f"scoreboard players add @a dayCounter 0",
+            f"scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            f"execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {safe_name}/player_join",
-            f"# 4. Manutencao dos detectores de ciclo dia/noite",
+            f"# 5. Manutencao dos detectores de ciclo dia/noite",
             f"execute if score #world {safe_name}_initialized matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             f"execute if score #world {safe_name}_initialized matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
-            f"# 5. Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
-            'execute if score #world is_night matches 0 if block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 1',
+            f"# 6. Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
+            f'execute if score #world is_night matches 0 if block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 1',
             f'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run function {safe_name}/cycle_night',
-            'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run scoreboard players set #world cycle_ran 1',
-            f"# 6. Detector de dia (amanhecer / sono / /time set 1000 / celestial light)",
-            'execute if score #world is_night matches 1 unless block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 0',
+            f'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run scoreboard players set #world cycle_ran 1',
+            f"# 7. Detector de dia (amanhecer / sono / /time set 1000 / celestial light)",
+            f'execute if score #world is_night matches 1 unless block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 0',
             f'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run function {safe_name}/cycle_morning',
-            'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run scoreboard players set #world cycle_ran 0'
+            f'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run scoreboard players set #world cycle_ran 0'
         ]
         tick_content = "\n".join(tick_lines) + "\n"
         for d in (func_dir, world_func_dir, custom_func_dir):

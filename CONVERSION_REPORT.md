@@ -123,10 +123,10 @@ Unconverted / Incompatible (RED)       :     0
 
 ```text
 # Checksums SHA-256 dos artefatos finais Bedrock 1.20+
-bd52da5bb50f2dc04d95cb9cc08a496dd361e9131799ff519a5e946da3785816 *converted_map.mcworld
-ca143b9451c952aff6e1fad51c45bcf4ccd9ef56406763529a138af7329b338a *converted_map.mcaddon
-b85ab162028f10ad833b87eb28d6046b77013062d82475017d93bda94a18603e *converted_behavior_pack.mcpack
-4925fe5dd24b2bf1aaef1f5b5bdbe1f9f728272897f3ae945c4597853bc587dc *converted_resource_pack.mcpack
+7fbcdd00e346499065a522bad8d3f673c5b8022af4fdf712ae6af1135dbd9270 *converted_map.mcworld
+4dcb2584d0aadba332f5385e7ef0f45ead110aedafec0256424382c714530d32 *converted_map.mcaddon
+84739a744b731cdf7c2f3b02ad0f5557f5973bd3501f4f5cffea341466a53ace *converted_behavior_pack.mcpack
+a6f775c32d260759568d9ef12ec23cb6aa5c14611c308daf00d47ee97975da4c *converted_resource_pack.mcpack
 
 ```
 
