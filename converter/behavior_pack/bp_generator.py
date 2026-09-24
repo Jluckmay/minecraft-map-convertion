@@ -391,7 +391,7 @@ class BehaviorPackGenerator:
             "tickingarea remove_all",
             "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
             "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
-            "tickingarea add 276 0 -2205 310 120 -2060 maze_templates_clock",
+            "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             "gamerule commandblockoutput false",
             "gamerule sendcommandfeedback true",
             "gamerule doimmediaterespawn true",
