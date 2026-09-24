@@ -33,12 +33,17 @@ This tool solves this problem by analyzing the Java world directly, converting d
   - Generates custom Behavior Pack entities (`entities/npc_*.json`) with `economy_trade_table` and interaction components.
   - Generates Resource Pack client definitions (`entity/npc_*.entity.json`) with corresponding textures and geometries.
   - Translates `/summon` commands to custom entity types and initializes `dayCounter` scoreboards for timed NPC spawns.
+  - Automatically incorporates visible NPC nametags (`minecraft:nameable`) and resilient `matches X..` ranges with existence guards to prevent missed spawns or duplications.
+- **Automated Day/Night Cycle & Gate Control Engine**:
+  - Replaces inert underground daylight detectors with an automated 24,000-tick software engine driven by `tick.mcfunction`.
+  - Executes `cycle_morning` (opens gates, displays Day X title/chat, triggers NPC and supply chest spawns) and `cycle_night` (closes gates, plays gate audio, increments day counter).
+  - Resolves Bedrock rawtext limitations by mapping dummy player scoreboards to `*` and continuously synchronizing `DAY_COUNTER` scores to all players (`@a`).
 - **Idempotent Command Conversion**:
   - Converts `.mcfunction` files to modern Bedrock 1.26.40 syntax.
   - Automatically wraps summon commands with `unless entity @e[type=...]` to ensure **zero duplication** upon repeated execution.
-  - Converts JSON `/tellraw` commands into Bedrock `{"rawtext": [...]}` with embedded color formatting codes (`§a`, `§6`, etc.).
+  - Converts JSON `/tellraw` and `/title` commands into Bedrock `{"rawtext": [...]}` with embedded color formatting codes (`§a`, `§6`, etc.).
   - Translates sound event identifiers (e.g., `entity.player.levelup` $\rightarrow$ `random.levelup`).
-  - Converts `/forceload` into safe documentation and continuous simulation areas (`tickingarea`) within the 100-chunk engine limit.
+  - Converts `/forceload` into safe documentation and continuous simulation areas (`tickingarea`) strictly within the 100-chunk engine limit (compact 76-chunk strategic budget).
 - **Entity Loot Table Translation**:
   - Automatically converts custom mob loot tables to Bedrock JSON format, preserving custom emerald drops, count ranges, and looting enchantments (`looting_enchant`).
 - **Sound Definitions & Custom Audio**:
@@ -115,12 +120,17 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
   - Cria entidades customizadas no Behavior Pack (`entities/npc_*.json`) com `economy_trade_table` e interações de troca.
   - Cria definições de cliente no Resource Pack (`entity/npc_*.entity.json`) com modelos e texturas correspondentes.
   - Traduz invocações `/summon` para as entidades dedicadas e inicializa objetivos de `dayCounter` para spawns temporizados.
+  - Adiciona nomes visíveis (`minecraft:nameable`) e faixas resilientes `matches X..` com guarda de existência para garantir que o aldeão sempre apareça e nunca se duplique.
+- **Motor Automatizado de Ciclo Dia/Noite e Portões**:
+  - Substitui sensores de luz solar subterrâneos inertes por um relógio automatizado de 24.000 ticks em software dirigido pelo `tick.mcfunction`.
+  - Executa `cycle_morning` (abre portões, exibe título/chat "Day X", invoca aldeões e gera baús de suprimentos) e `cycle_night` (fecha portões com bedrock, reproduz sons do portão e avança o contador de dias).
+  - Resolve restrições do Bedrock rawtext convertendo nomes dummy para `*` e sincronizando continuamente o `DAY_COUNTER` com todos os jogadores (`@a`).
 - **Comandos Idempotentes**:
   - Converte `.mcfunction` para a sintaxe moderna do Bedrock 1.26.40.
   - Adiciona automaticamente a cláusula `unless entity @e[type=...]` para impedir duplicações mesmo se a função for acionada repetidamente.
-  - Converte comandos `/tellraw` para a sintaxe Bedrock `{"rawtext": [...]}` com códigos de formatação de cores (`§a`, `§6`, etc.).
+  - Converte comandos `/tellraw` e `/title` para a sintaxe Bedrock `{"rawtext": [...]}` com códigos de formatação de cores (`§a`, `§6`, etc.).
   - Traduz eventos de som (`entity.player.levelup` $\rightarrow$ `random.levelup`).
-  - Adapta `/forceload` para áreas contínuas (`tickingarea`) respeitando o limite do motor de 100 chunks por área.
+  - Adapta `/forceload` para áreas contínuas (`tickingarea`) respeitando estritamente o limite do motor de 100 chunks somados no mundo (orçamento compacto de 76 chunks).
 - **Conversão de Tabelas de Saque (Loot Tables)**:
   - Traduz as tabelas de saque de monstros para o formato JSON do Bedrock, preservando drops extras de esmeraldas, multiplicadores de saque (`looting_enchant`) e contagens (`set_count`).
 - **Definições de Som e Áudio Personalizado**:

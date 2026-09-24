@@ -402,7 +402,10 @@ class DatapackConverter:
                         process_node(n)
                 elif isinstance(node, dict):
                     if "score" in node:
-                        rawtext_elements.append({"score": node["score"]})
+                        sc = dict(node["score"])
+                        if not str(sc.get("name", "")).startswith("@"):
+                            sc["name"] = "*"
+                        rawtext_elements.append({"score": sc})
                     else:
                         txt = node.get("text", "")
                         color = node.get("color", "")
@@ -443,7 +446,10 @@ class DatapackConverter:
                         process_node(n)
                 elif isinstance(node, dict):
                     if "score" in node:
-                        rawtext_elements.append({"score": node["score"]})
+                        sc = dict(node["score"])
+                        if not str(sc.get("name", "")).startswith("@"):
+                            sc["name"] = "*"
+                        rawtext_elements.append({"score": sc})
                     else:
                         txt = node.get("text", "")
                         color = node.get("color", "")
@@ -1330,23 +1336,90 @@ class MapConverterApp:
     def _generate_utility_functions(self):
         func_dir = os.path.join(self.bp_dir, "functions", self.safe_name)
         os.makedirs(func_dir, exist_ok=True)
+        root_func_dir = os.path.join(self.bp_dir, "functions")
+        custom_func_dir = os.path.join(self.bp_dir, "functions", "custom")
+        os.makedirs(custom_func_dir, exist_ok=True)
 
-        # Função de inicialização
+        # 1. Ciclo da Manhã (Abertura de portões, áudio, exibição do dia, aldeões e suprimentos)
+        morning_lines = [
+            f"# {self.world_name} Morning Cycle - Gate opening, day display, NPCs & chests",
+            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"opening","color":"yellow","bold":true}},{{"text":"..."}}]}}',
+            "setblock 286 1 -2168 redstone_block",
+            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
+            "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            'titleraw @a title {"rawtext":[{"text":""},{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
+            'tellraw @a {"rawtext":[{"text":""},{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
+            "function custom/generates_npc",
+            "function custom/generates_chest",
+            "kill @e[type=villager,tag=!Vil]"
+        ]
+        morning_content = "\n".join(morning_lines) + "\n"
+        for d in (func_dir, root_func_dir, custom_func_dir):
+            with open(os.path.join(d, "cycle_morning.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(morning_content)
+
+        # 2. Ciclo da Noite (Fechamento de portões, áudio e avanço do contador de dias)
+        night_lines = [
+            f"# {self.world_name} Night Cycle - Gate closing & day counter increment",
+            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"closing","color":"yellow","bold":true}},{{"text":"..."}}]}}',
+            "setblock 287 1 -2168 redstone_block",
+            "setblock 164 44 -2210 redstone_block",
+            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
+            "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            "scoreboard players add DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter"
+        ]
+        night_content = "\n".join(night_lines) + "\n"
+        for d in (func_dir, root_func_dir, custom_func_dir):
+            with open(os.path.join(d, "cycle_night.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(night_content)
+
+        # 3. Função de inicialização e Ticking Areas permanentes (<100 chunks)
         init_lines = [
-            f"# {self.world_name} Initialization for Bedrock 1.20+",
-            f"tickingarea add 0 0 0 0 319 0 {self.safe_name}_core",
-            f"scoreboard objectives add {self.safe_name}_initialized dummy",
-            f"scoreboard players set #world {self.safe_name}_initialized 1",
+            f"# {self.world_name} Initialization for Bedrock 1.21+",
+            "tickingarea remove_all",
+            "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
+            "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
+            "gamerule commandblockoutput false",
+            "gamerule sendcommandfeedback true",
+            "gamerule doimmediaterespawn true",
+            "gamerule domobspawning false",
+            "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add dayCounter dummy",
+            "scoreboard objectives add day_timer dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "scoreboard players add #world dayCounter 0",
-            f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.20+!"}}]}}'
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "time set 0",
+            "scoreboard players set #timer day_timer 0",
+            f"scoreboard objectives add {self.safe_name}_initialized dummy",
+            f"scoreboard players set #world {self.safe_name}_initialized 1",
+            f"function {self.safe_name}/cycle_morning",
+            f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
-        with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
-            f.write("\n".join(init_lines) + "\n")
+        init_content = "\n".join(init_lines) + "\n"
+        for d in (func_dir, root_func_dir, custom_func_dir):
+            with open(os.path.join(d, "init_world.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(init_content)
 
+        # 4. Tick hook com relógio contínuo de 24.000 ticks
         tick_lines = [
-            f"execute unless score #world {self.safe_name}_initialized matches 1 run function {self.safe_name}/init_world"
+            f"scoreboard objectives add {self.safe_name}_initialized dummy",
+            f"execute unless score #world {self.safe_name}_initialized matches 1 run function {self.safe_name}/init_world",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "scoreboard objectives add day_timer dummy",
+            "scoreboard players add #timer day_timer 1",
+            f"execute if score #timer day_timer matches 12000 run function {self.safe_name}/cycle_night",
+            f"execute if score #timer day_timer matches 24000 run function {self.safe_name}/cycle_morning",
+            "execute if score #timer day_timer matches 24000.. run scoreboard players set #timer day_timer 0"
         ]
         with open(os.path.join(self.bp_dir, "functions", "tick.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(tick_lines) + "\n")

@@ -120,7 +120,11 @@ class CommandTranslator:
                         rawtext_elements.append({"text": node})
                 elif isinstance(node, dict):
                     if "score" in node:
-                        rawtext_elements.append({"score": node["score"]})
+                        score_dict = dict(node["score"])
+                        name_val = str(score_dict.get("name", ""))
+                        if not name_val.startswith("@"):
+                            score_dict["name"] = "*"
+                        rawtext_elements.append({"score": score_dict})
                         return
                     prefix = ""
                     color = node.get("color", "")

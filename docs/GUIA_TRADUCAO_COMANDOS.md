@@ -104,5 +104,15 @@ This guide documents how the `map_converter.py` engine translates Java Edition c
   ```
 
 #### 1.4. `/forceload` $\rightarrow$ `/tickingarea`
-- Java `/forceload` lines are documented as informative comments in functions and replaced by persistent simulation areas using `/tickingarea` during world initialization, respecting the 100-chunk per area engine limit.
+- Java `/forceload` lines are documented as informative comments in functions and replaced by persistent simulation areas using `/tickingarea` during world initialization, respecting the 100-chunk world-wide engine limit.
+
+#### 1.5. `/tellraw` e `/titleraw` Scoreboard Resolution
+- Java Edition resolves dummy player scoreboards natively in JSON text (e.g. `{"score": {"name": "DAY_COUNTER", "objective": "dayCounter"}}`).
+- Bedrock Edition requires player/entity selectors (`*`, `@s`, `@p`). The translator automatically converts dummy score names to `"name": "*"` and the behavior pack continuously synchronizes scores to `@a` (`scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter`).
+
+#### 1.6. Motor Automatizado de Ciclo Dia/Noite (`tick.mcfunction`)
+- Como sensores de luz solar sob blocos opacos permanecem inertes no Bedrock (`sky light = 0`), a alternância de dia e noite é dirigida com precisão em software pelo `tick.mcfunction` (relógio de 24.000 ticks):
+  - **Tick 12.000 (Pôr do Sol)**: Executa `cycle_night.mcfunction` (fechamento dos portões com bedrock, reprodução de áudio de portões e incremento do placar `DAY_COUNTER`).
+  - **Tick 24.000 (Nascer do Sol)**: Executa `cycle_morning.mcfunction` (abertura dos portões, áudio, exibição do título "Day X", invocação de aldeões com `matches X..` e clonagem de baús de suprimentos).
+
 

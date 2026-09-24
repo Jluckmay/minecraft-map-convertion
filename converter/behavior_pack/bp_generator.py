@@ -204,6 +204,12 @@ class BehaviorPackGenerator:
                                                     "is_summonable": True
                                                 },
                                                 "components": {
+                                                    "minecraft:nameable": {
+                                                        "always_show": True,
+                                                        "allow_name_tag_renaming": False
+                                                    },
+                                                    "minecraft:health": {"value": 100, "max": 100},
+                                                    "minecraft:damage_sensor": {"triggers": [{"cause": "all", "deals_damage": False}]},
                                                     "minecraft:type_family": {"family": ["npc", "villager", "mob"]},
                                                     "minecraft:collision_box": {"width": 0.6, "height": 1.9},
                                                     "minecraft:movement": {"value": 0.0},
@@ -248,6 +254,23 @@ class BehaviorPackGenerator:
                             converted_lines.append(line)
                         else:
                             trans = CommandTranslator.translate(line_s, known_npcs, safe_name)
+                            if "generates_npc" in fname:
+                                if "tellraw @a" in trans and "matches " in trans and "unless entity" not in trans:
+                                    m_npc = re.search(r'matches\s+(\d+)', trans)
+                                    if m_npc:
+                                        day_num = int(m_npc.group(1))
+                                        day_to_npc = {
+                                            4: "bruce", 9: "boris", 13: "joe", 17: "tobias",
+                                            21: "george", 26: "erik", 31: "adam", 38: "joakim",
+                                            47: "seth", 55: "jorn"
+                                        }
+                                        npc_slug = day_to_npc.get(day_num)
+                                        if npc_slug:
+                                            trans = re.sub(r'matches\s+\d+', f'matches {day_num}.. execute unless entity @e[type={safe_name}:npc_{npc_slug}]', trans)
+                                elif "summon" in trans and "matches " in trans:
+                                    trans = re.sub(r'matches\s+(\d+)\b', r'matches \1..', trans)
+                                elif "setblock" in trans and "matches 55" in trans:
+                                    trans = re.sub(r'matches\s+55\b', f'matches 55.. execute unless entity @e[type={safe_name}:npc_jorn]', trans)
                             converted_lines.append(trans)
 
                     content_str = "\n".join(converted_lines) + "\n"
@@ -292,44 +315,90 @@ class BehaviorPackGenerator:
         # 4. Funções Utilitárias e Hooks de Tick com Tickingareas do Labirinto
         world_func_dir = os.path.join(func_dir, safe_name)
         os.makedirs(world_func_dir, exist_ok=True)
+        custom_func_dir = os.path.join(func_dir, "custom")
+        os.makedirs(custom_func_dir, exist_ok=True)
 
+        # 4a. Funções do Motor de Ciclo Dia/Noite (Abertura/Fechamento de Portões, Display e NPCs)
+        morning_lines = [
+            f"# {world_name} Morning Cycle - Gate opening, day display, NPCs & chests",
+            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"opening","color":"yellow","bold":true}},{{"text":"..."}}]}}',
+            "setblock 286 1 -2168 redstone_block",
+            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
+            "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            'titleraw @a title {"rawtext":[{"text":""},{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
+            'tellraw @a {"rawtext":[{"text":""},{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
+            "function custom/generates_npc",
+            "function custom/generates_chest",
+            "kill @e[type=villager,tag=!Vil]"
+        ]
+        morning_content = "\n".join(morning_lines) + "\n"
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "cycle_morning.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(morning_content)
+
+        night_lines = [
+            f"# {world_name} Night Cycle - Gate closing & day counter increment",
+            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"closing","color":"yellow","bold":true}},{{"text":"..."}}]}}',
+            "setblock 287 1 -2168 redstone_block",
+            "setblock 164 44 -2210 redstone_block",
+            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
+            "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            "scoreboard players add DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter"
+        ]
+        night_content = "\n".join(night_lines) + "\n"
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "cycle_night.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(night_content)
+
+        # 4b. Inicialização do Mundo e Ticking Areas Enxutas (<100 chunks)
         init_lines = [
             f"# {world_name} Initialization for Bedrock 1.21+",
-            "tickingarea add 250 0 -2250 350 120 -2150 maze_spawn",
-            "tickingarea add 250 0 -2450 350 120 -2350 maze_north",
-            "tickingarea add 450 0 -2250 550 120 -2050 maze_east",
-            "# Ticking areas permanentes cobrindo todos os portões, levers e blocos de comando",
-            "tickingarea add 100 0 -2460 350 120 -2420 maze_doors_north",
-            "tickingarea add 100 0 -1865 350 120 -1820 maze_doors_south",
-            "tickingarea add 490 0 -2260 540 120 -2040 maze_doors_east",
-            "tickingarea add -95 0 -2260 -55 120 -2040 maze_doors_west",
-            "tickingarea add 200 0 -2210 290 120 -2140 maze_center_clones",
-            "tickingarea add -280 0 -2320 -150 120 -2180 maze_cmd_blocks",
+            "# Limpa ticking areas residuais para garantir orcamento de chunks (<100)",
+            "tickingarea remove_all",
+            "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
+            "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
+            "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             "gamerule commandblockoutput false",
             "gamerule sendcommandfeedback true",
             "gamerule doimmediaterespawn true",
             "gamerule domobspawning false",
             "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add dayCounter dummy",
+            "scoreboard objectives add day_timer dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "scoreboard players add #world dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "time set 0",
+            "scoreboard players set #timer day_timer 0",
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players set #world {safe_name}_initialized 1",
+            f"function {safe_name}/cycle_morning",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
         init_content = "\n".join(init_lines) + "\n"
-        with open(os.path.join(world_func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
-            f.write(init_content)
-        with open(os.path.join(func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
-            f.write(init_content)
-        custom_func_dir = os.path.join(func_dir, "custom")
-        os.makedirs(custom_func_dir, exist_ok=True)
-        with open(os.path.join(custom_func_dir, "init_world.mcfunction"), "w", encoding="utf-8") as f:
-            f.write(init_content)
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "init_world.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(init_content)
 
+        # 4c. Driver de Ticks Contínuo (Sincronização de Placar e Relógio de 24.000 Ticks)
         tick_lines = [
             f"scoreboard objectives add {safe_name}_initialized dummy",
-            f"execute unless score #world {safe_name}_initialized matches 1 run function {safe_name}/init_world"
+            f"execute unless score #world {safe_name}_initialized matches 1 run function {safe_name}/init_world",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "scoreboard objectives add day_timer dummy",
+            "scoreboard players add #timer day_timer 1",
+            f"execute if score #timer day_timer matches 12000 run function {safe_name}/cycle_night",
+            f"execute if score #timer day_timer matches 24000 run function {safe_name}/cycle_morning",
+            "execute if score #timer day_timer matches 24000.. run scoreboard players set #timer day_timer 0"
         ]
         with open(os.path.join(func_dir, "tick.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(tick_lines) + "\n")

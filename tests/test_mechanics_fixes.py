@@ -133,6 +133,90 @@ class TestMechanicsFixes(unittest.TestCase):
         finally:
             shutil.rmtree(tmp_dir)
 
+    def test_tellraw_score_rawtext(self):
+        """Testa se convert_tellraw_json converte scores de dummy players para '*' no rawtext do Bedrock."""
+        payload = json.dumps([
+            "",
+            {"text": "Day ", "color": "gray"},
+            {"score": {"name": "DAY_COUNTER", "objective": "dayCounter"}}
+        ])
+        converted = CommandTranslator.convert_tellraw_json(payload)
+        data = json.loads(converted)
+        rawtext = data.get("rawtext", [])
+        self.assertEqual(len(rawtext), 2)
+        score_elem = rawtext[1]
+        self.assertIn("score", score_elem)
+        self.assertEqual(score_elem["score"]["name"], "*")
+        self.assertEqual(score_elem["score"]["objective"], "dayCounter")
+
+    def test_day_cycle_functions_generation(self):
+        """Testa se cycle_morning.mcfunction e cycle_night.mcfunction são geradas com os comandos corretos."""
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            target_bp = os.path.join(tmp_dir, "target_bp")
+            BehaviorPackGenerator.generate("", target_bp, "MazeRunner", "mazerunner", "dummy-rp-uuid")
+
+            # cycle_morning
+            m_func = os.path.join(target_bp, "functions", "mazerunner", "cycle_morning.mcfunction")
+            self.assertTrue(os.path.exists(m_func))
+            with open(m_func, "r", encoding="utf-8") as f:
+                m_content = f.read()
+            self.assertIn("setblock 286 1 -2168 redstone_block", m_content)
+            self.assertIn("titleraw @a title", m_content)
+            self.assertIn("function custom/generates_npc", m_content)
+            self.assertIn("function custom/generates_chest", m_content)
+
+            # cycle_night
+            n_func = os.path.join(target_bp, "functions", "mazerunner", "cycle_night.mcfunction")
+            self.assertTrue(os.path.exists(n_func))
+            with open(n_func, "r", encoding="utf-8") as f:
+                n_content = f.read()
+            self.assertIn("setblock 287 1 -2168 redstone_block", n_content)
+            self.assertIn("scoreboard players add DAY_COUNTER dayCounter 1", n_content)
+            self.assertIn("scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter", n_content)
+
+            # tick.mcfunction
+            tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")
+            self.assertTrue(os.path.exists(tick_func))
+            with open(tick_func, "r", encoding="utf-8") as f:
+                t_content = f.read()
+            self.assertIn("scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter", t_content)
+            self.assertIn("execute if score #timer day_timer matches 12000 run function mazerunner/cycle_night", t_content)
+            self.assertIn("execute if score #timer day_timer matches 24000 run function mazerunner/cycle_morning", t_content)
+        finally:
+            shutil.rmtree(tmp_dir)
+
+    def test_ticking_areas_budget(self):
+        """Testa se as ticking areas permanentes respeitam o teto de 100 chunks do Bedrock."""
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            target_bp = os.path.join(tmp_dir, "target_bp")
+            BehaviorPackGenerator.generate("", target_bp, "MazeRunner", "mazerunner", "dummy-rp-uuid")
+
+            init_func = os.path.join(target_bp, "functions", "mazerunner", "init_world.mcfunction")
+            self.assertTrue(os.path.exists(init_func))
+            with open(init_func, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            # Extrai coordenadas de cada tickingarea add
+            total_chunks = 0
+            ta_count = 0
+            for line in lines:
+                if line.strip().startswith("tickingarea add"):
+                    parts = line.strip().split()
+                    x1, z1, x2, z2 = int(parts[2]), int(parts[4]), int(parts[5]), int(parts[7])
+                    cx1, cx2 = min(x1, x2) // 16, max(x1, x2) // 16
+                    cz1, cz2 = min(z1, z2) // 16, max(z1, z2) // 16
+                    chunks = (cx2 - cx1 + 1) * (cz2 - cz1 + 1)
+                    total_chunks += chunks
+                    ta_count += 1
+
+            self.assertLessEqual(ta_count, 10, "Bedrock permite no máximo 10 ticking areas.")
+            self.assertLessEqual(total_chunks, 100, f"Total de chunks ({total_chunks}) deve ser <= 100.")
+        finally:
+            shutil.rmtree(tmp_dir)
+
 
 if __name__ == "__main__":
     unittest.main()
+

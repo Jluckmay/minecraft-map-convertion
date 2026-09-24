@@ -60,21 +60,6 @@ Não convertidos / Incompatíveis (RED)   :     0
 - **Solução**: Preservação de 100% dos contêineres de bloco (`Chest`, `Barrel`, `ShulkerBox`, `Hopper`, etc.) no LevelDB, e mapeamento automático do inventário de `level.dat`/`playerdata` para `~local_player`.
 - **Status**: `RESOLVIDO`
 
-#### Problema 7: Loot Tables de Mobs e Drops de Esmeraldas
-- **Causa Raiz**: O gerador de Behavior Pack não incluía a conversão das 21 tabelas de loot de entidades do Java (`loot_tables/entities/`), fazendo os monstros utilizarem o loot padrão vanilla sem o drop adicional de esmeraldas.
-- **Solução**: Implementação do conversor `convert_loot_table()` preservando pools de esmeraldas, `set_count` e `looting_enchant`, gerando todos os 21 arquivos JSON no Behavior Pack.
-- **Status**: `RESOLVIDO`
-
-#### Problema 8: Ciclo de Dias e Invocação de Aldeões Específicos
-- **Causa Raiz**: A sintaxe gerada para invocar aldeões possuía o nome na posição incorreta e o comando nativo `/summon` no Bedrock não suporta ofertas NBT; além disso, a pontuação base do objetivo `dayCounter` não era inicializada em `init_world.mcfunction`.
-- **Solução**: Tradução de `/summon` com nomes de NPCs para entidades customizadas (`mazescapist:npc_<slug>`), prevenção de duplicações via `execute unless entity`, inicialização de scoreboards e ajuste dos limites de ticking area para menos de 100 chunks.
-- **Status**: `RESOLVIDO`
-
-#### Problema 9: Sons dos Portões do Labirinto (Illusioner)
-- **Causa Raiz**: Comandos `/playsound entity.illusioner.*` falhavam em silêncio porque o Illusioner não existe nativamente no Bedrock e a engine exige o catálogo `sounds/sound_definitions.json`.
-- **Solução**: Geração automática de `sound_definitions.json` (e `sounds.json`) no Resource Pack mapeando todos os eventos do Illusioner diretamente para os áudios `.ogg` de pedras deslizando.
-- **Status**: `RESOLVIDO`
-
 ---
 
 ## English Version (EN)
@@ -132,31 +117,16 @@ Unconverted / Incompatible (RED)       :     0
 - **Solution**: Preserved 100% of container block entities (`Chest`, `Barrel`, `ShulkerBox`, `Hopper`, etc.) in LevelDB, and automatically synchronized player inventory from `level.dat`/`playerdata` into `~local_player`.
 - **Status**: `RESOLVED`
 
-#### Issue 7: Mob Loot Tables & Emerald Drops
-- **Root Cause**: The Behavior Pack generator omitted conversion for all 21 Java entity loot tables (`loot_tables/entities/`), causing mobs to fall back to vanilla loot without custom emerald drops.
-- **Solution**: Implemented `convert_loot_table()` preserving emerald pools, `set_count`, and `looting_enchant`, writing all 21 JSON files to Behavior Pack.
-- **Status**: `RESOLVED`
-
-#### Issue 8: Day Counter & Time-based Villager Spawns
-- **Root Cause**: Generated `/summon` syntax placed names in invalid positions, native Bedrock `/summon` cannot inject NBT trades, and baseline scores for `dayCounter` were uninitialized in `init_world.mcfunction`.
-- **Solution**: Translated `/summon` with NPC names to dedicated entities (`mazescapist:npc_<slug>`), added `execute unless entity` guards, initialized scoreboards, and clamped ticking area boundaries under 100 chunks.
-- **Status**: `RESOLVED`
-
-#### Issue 9: Maze Gate Sound Effects (Illusioner Audio)
-- **Root Cause**: `/playsound entity.illusioner.*` failed silently because Illusioner is absent natively from Bedrock and the engine requires registration in `sounds/sound_definitions.json`.
-- **Solution**: Automatically generated `sound_definitions.json` (and `sounds.json`) in the Resource Pack mapping all Illusioner events to sliding stone gate `.ogg` audio files.
-- **Status**: `RESOLVED`
-
 ---
 
 ## 4. Delivery Artifacts / Artefatos de Entrega (`output/`)
 
 ```text
 # Checksums SHA-256 dos artefatos finais Bedrock 1.20+
-63bbad5a0a7316d9d5dd0c77189f1d7f41a72e0d7fe6b6429a7fd3a6ece1a6f3 *converted_map.mcworld
-99959acd48fa86351904398a05987b4544976b8a4b77647fcc41c5c25bd67288 *converted_map.mcaddon
-c2d4947c549c8bdf9b81de6e377f8bd6fc9e85091cd2e9a921ee909a03b6563d *converted_behavior_pack.mcpack
-7e6fe4e900f844ce58e564f7cbf0aa8b0f238c6aaecca26773f0674acd53fbe3 *converted_resource_pack.mcpack
+e3580f1069cd804c4ac582993f593498deb2ac6c5d0b53e03bf949c60aeb3b7c *converted_map.mcworld
+53fb362902d35ef70f43d587ca956dad9d95948a25c7e6ad929dd9a006457d60 *converted_map.mcaddon
+36317f0fff097603258bacddd455638ba2ad6693be165298a5f565f4adf5fb36 *converted_behavior_pack.mcpack
+ae8b0a5c67a0010eb8836f4ca81a04e6d34f51956247334fa22967bfed0f1e01 *converted_resource_pack.mcpack
 
 ```
 
