@@ -390,6 +390,8 @@ class BehaviorPackGenerator:
         # 4b. Inicialização do Mundo e Ticking Areas Enxutas (<100 chunks)
         init_lines = [
             f"# {world_name} Initialization for Bedrock 1.21+",
+            f"scoreboard objectives add {safe_name}_initialized dummy",
+            f"scoreboard players set #world {safe_name}_initialized 1",
             "# Limpa ticking areas residuais para garantir orcamento de chunks (<100)",
             "tickingarea remove_all",
             "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
@@ -419,8 +421,6 @@ class BehaviorPackGenerator:
             "setblock 287 99 -2168 bedrock",
             "setblock 286 100 -2168 daylight_detector",
             "setblock 287 100 -2168 daylight_detector_inverted",
-            f"scoreboard objectives add {safe_name}_initialized dummy",
-            f"scoreboard players set #world {safe_name}_initialized 1",
             f"function {safe_name}/cycle_morning",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
@@ -429,13 +429,30 @@ class BehaviorPackGenerator:
             with open(os.path.join(d, "init_world.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(init_content)
 
-        # 4c. Driver de Ticks Contínuo (Daylight Detector State Machine + Sincronização)
+        # 4c. Manipulador de Entrada de Jogador (Boas-vindas e Exibição de Dia)
+        player_join_lines = [
+            f"# {world_name} Player Join Handler",
+            "tag @s add joined",
+            "scoreboard players add @s dayCounter 0",
+            "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            'titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
+            f'tellraw @s {{"rawtext":[{{"text":"§a[{world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
+        ]
+        player_join_content = "\n".join(player_join_lines) + "\n"
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "player_join.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(player_join_content)
+
+        # 4d. Driver de Ticks Contínuo (Daylight Detector State Machine + Sincronização)
         tick_lines = [
             f"scoreboard objectives add {safe_name}_initialized dummy",
-            f"execute unless score #world {safe_name}_initialized matches 1 run function {safe_name}/init_world",
+            f"scoreboard players add #world {safe_name}_initialized 0",
+            f"execute if score #world {safe_name}_initialized matches 0 run function {safe_name}/init_world",
+            f"execute if score #world {safe_name}_initialized matches 0 run function init_world",
             "scoreboard players add @a dayCounter 0",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            f"execute as @a[tag=!joined] run function {safe_name}/player_join",
             "execute unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
             "# Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",

@@ -1395,6 +1395,8 @@ class MapConverterApp:
         # 3. Função de inicialização e Ticking Areas permanentes (<100 chunks)
         init_lines = [
             f"# {self.world_name} Initialization for Bedrock 1.21+",
+            f"scoreboard objectives add {self.safe_name}_initialized dummy",
+            f"scoreboard players set #world {self.safe_name}_initialized 1",
             "tickingarea remove_all",
             "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
             "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
@@ -1422,8 +1424,6 @@ class MapConverterApp:
             "setblock 287 99 -2168 bedrock",
             "setblock 286 100 -2168 daylight_detector",
             "setblock 287 100 -2168 daylight_detector_inverted",
-            f"scoreboard objectives add {self.safe_name}_initialized dummy",
-            f"scoreboard players set #world {self.safe_name}_initialized 1",
             f"function {self.safe_name}/cycle_morning",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
@@ -1432,13 +1432,30 @@ class MapConverterApp:
             with open(os.path.join(d, "init_world.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(init_content)
 
+        # Manipulador de entrada do jogador
+        player_join_lines = [
+            f"# {self.world_name} Player Join Handler",
+            "tag @s add joined",
+            "scoreboard players add @s dayCounter 0",
+            "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            'titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
+            f'tellraw @s {{"rawtext":[{{"text":"§a[{self.world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
+        ]
+        player_join_content = "\n".join(player_join_lines) + "\n"
+        for d in (func_dir, root_func_dir, custom_func_dir):
+            with open(os.path.join(d, "player_join.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(player_join_content)
+
         # 4. Tick hook com máquina de estados Daylight Detector + sincronização
         tick_lines = [
             f"scoreboard objectives add {self.safe_name}_initialized dummy",
-            f"execute unless score #world {self.safe_name}_initialized matches 1 run function {self.safe_name}/init_world",
+            f"scoreboard players add #world {self.safe_name}_initialized 0",
+            f"execute if score #world {self.safe_name}_initialized matches 0 run function {self.safe_name}/init_world",
+            f"execute if score #world {self.safe_name}_initialized matches 0 run function init_world",
             "scoreboard players add @a dayCounter 0",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            f"execute as @a[tag=!joined] run function {self.safe_name}/player_join",
             "execute unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
             "# Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",

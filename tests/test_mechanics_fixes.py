@@ -185,6 +185,16 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("daylight_detector", t_content)
             self.assertIn("cycle_night", t_content)
             self.assertIn("cycle_morning", t_content)
+            self.assertIn("scoreboard players add #world mazerunner_initialized 0", t_content)
+            self.assertIn("player_join", t_content)
+
+            # player_join.mcfunction
+            join_func = os.path.join(target_bp, "functions", "mazerunner", "player_join.mcfunction")
+            self.assertTrue(os.path.exists(join_func))
+            with open(join_func, "r", encoding="utf-8") as f:
+                j_content = f.read()
+            self.assertIn("tag @s add joined", j_content)
+            self.assertIn("titleraw @s title", j_content)
         finally:
             shutil.rmtree(tmp_dir)
 
