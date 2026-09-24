@@ -135,7 +135,7 @@ class TestMechanicsFixes(unittest.TestCase):
             shutil.rmtree(tmp_dir)
 
     def test_tellraw_score_rawtext(self):
-        """Testa se convert_tellraw_json converte scores de dummy players para '@s' no rawtext do Bedrock."""
+        """Testa se convert_tellraw_json converte scores de dummy players para '*' no rawtext do Bedrock."""
         payload = json.dumps([
             "",
             {"text": "Day ", "color": "gray"},
@@ -147,7 +147,7 @@ class TestMechanicsFixes(unittest.TestCase):
         self.assertEqual(len(rawtext), 2)
         score_elem = rawtext[1]
         self.assertIn("score", score_elem)
-        self.assertEqual(score_elem["score"]["name"], "@s")
+        self.assertEqual(score_elem["score"]["name"], "*")
         self.assertEqual(score_elem["score"]["objective"], "dayCounter")
 
     def test_day_cycle_functions_generation(self):

@@ -60,11 +60,6 @@ Não convertidos / Incompatíveis (RED)   :     0
 - **Solução**: Preservação de 100% dos contêineres de bloco (`Chest`, `Barrel`, `ShulkerBox`, `Hopper`, etc.) no LevelDB, e mapeamento automático do inventário de `level.dat`/`playerdata` para `~local_player`.
 - **Status**: `RESOLVIDO`
 
-#### Problema 7: Ciclo Dia/Noite, Exibição do Dia e Spawn de Aldeões
-- **Causa Raiz**: O uso de `*` no `rawtext` dependia do executor console (que é nulo no Bedrock), omitindo o número do dia. Os comandos de anúncio em `generates_npc` repetiam a palavra-chave `execute` (`matches 4.. execute unless`), gerando erro de sintaxe no Bedrock 1.20+. Além disso, o contador de ticks em software não acompanhava saltos de tempo (`/time set` ou sono na cama), impedindo o avanço de dias e o spawn de Bruce (Dia 4+).
-- **Solução**: Sincronização em tempo real via `daylight_detector` na Clareira com máquina de estados no `tick.mcfunction`; execução de `titleraw` e `tellraw` com `execute as @a run ...` e `@s` no score; encadeamento limpo e direto de subcomandos no `generates_npc` com reordenação de anúncio pré-spawn.
-- **Status**: `RESOLVIDO`
-
 ---
 
 ## English Version (EN)
@@ -122,21 +117,16 @@ Unconverted / Incompatible (RED)       :     0
 - **Solution**: Preserved 100% of container block entities (`Chest`, `Barrel`, `ShulkerBox`, `Hopper`, etc.) in LevelDB, and automatically synchronized player inventory from `level.dat`/`playerdata` into `~local_player`.
 - **Status**: `RESOLVED`
 
-#### Issue 7: Day/Night Cycle, Day Number Display, and Villager Spawning
-- **Root Cause**: Bedrock rawtext score `*` wildcard requires an entity command executor (`@s`), resolving to empty text when invoked from server tick hooks. Repeated `execute` keywords in `generates_npc` caused syntax errors on Bedrock 1.20+. Furthermore, the software tick timer did not track celestial lighting or time skips (`/time set` or sleeping in beds), freezing day count progression.
-- **Solution**: Real-time celestial synchronization via a sky-exposed `daylight_detector` in the Glade ticking area; `titleraw`/`tellraw` execution using `execute as @a run ...` with `@s`; and clean single-chain execute syntax in `generates_npc` with arrival announcement ordered prior to NPC spawn.
-- **Status**: `RESOLVED`
-
 ---
 
 ## 4. Delivery Artifacts / Artefatos de Entrega (`output/`)
 
 ```text
 # Checksums SHA-256 dos artefatos finais Bedrock 1.20+
-6b5bbaa157379a2bc207c050a873432f64978d65a3f39cb864d2c3d69ca2128c *converted_map.mcworld
-a38bbd94c581bb93a7cc642b2335790012ad9feb2014851efecea21800572152 *converted_map.mcaddon
-1b125e19f2c60b0750ec00c7ab3ceaab13ff1943e995beb28193de18d450ce5b *converted_behavior_pack.mcpack
-3203d7572c09bf23db6c4ca665bbf69447be594b03b94fb722582a0f32a69a6f *converted_resource_pack.mcpack
+11ed35c6a5a821d50b2e02a39d173da893b1e86dacf08fc2d368cdf772ac58ec *converted_map.mcworld
+d88bffff2ce67ade474e835290f1c04310633281782889c393daedd6643ae010 *converted_map.mcaddon
+97b8fc9500d24e45d7ed6597780e74e6d0f997a987570ae23cabe595b95be26e *converted_behavior_pack.mcpack
+952febf37fb8633915ec158077027bf08610a0c136d2e52d357cceabcef82439 *converted_resource_pack.mcpack
 
 ```
 

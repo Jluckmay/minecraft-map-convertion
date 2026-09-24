@@ -82,14 +82,17 @@ class BehaviorPackGenerator:
                         if isinstance(count, dict):
                             functions.append({
                                 "function": "set_count",
-                                "count": {"min": float(count.get("min", 1)), "max": float(count.get("max", 1))}
+                                "count": {"min": int(float(count.get("min", 1))), "max": int(float(count.get("max", 1)))}
                             })
                         else:
-                            functions.append({"function": "set_count", "count": int(count)})
+                            functions.append({"function": "set_count", "count": int(float(count))})
                     elif "looting_enchant" in f_name:
+                        c_dict = f.get("count", {"min": 0, "max": 1})
+                        if isinstance(c_dict, dict):
+                            c_dict = {"min": int(float(c_dict.get("min", 0))), "max": int(float(c_dict.get("max", 1)))}
                         functions.append({
                             "function": "looting_enchant",
-                            "count": f.get("count", {"min": 0.0, "max": 1.0})
+                            "count": c_dict
                         })
 
                 b_entries.append({
@@ -344,14 +347,15 @@ class BehaviorPackGenerator:
             f"# {world_name} Morning Cycle - Gate opening, day display, NPCs & chests",
             f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"opening","color":"yellow","bold":true}},{{"text":"..."}}]}}',
             "setblock 286 1 -2168 redstone_block",
-            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 0.7 1 0.03",
-            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 0.7 1 0.03",
-            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 0.7 1 0.03",
-            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 10.0 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 10.0 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 10.0 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 10.0 1 0.03",
+            "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            'execute as @a run titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"@s","objective":"dayCounter"}}]}',
-            'execute as @a run tellraw @s {"rawtext":[{"text":"§7Day "},{"score":{"name":"@s","objective":"dayCounter"}}]}',
+            'execute as @a run titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
+            'execute as @a run tellraw @s {"rawtext":[{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
             "function custom/generates_npc",
             "function custom/generates_chest",
             "kill @e[type=villager,tag=!Vil]"
@@ -366,10 +370,11 @@ class BehaviorPackGenerator:
             f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"closing","color":"yellow","bold":true}},{{"text":"..."}}]}}',
             "setblock 287 1 -2168 redstone_block",
             "setblock 164 44 -2210 redstone_block",
-            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 0.7 1 0.03",
-            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 0.7 1 0.03",
-            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 0.7 1 0.03",
-            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 10.0 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 10.0 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 10.0 1 0.03",
+            "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 10.0 1 0.03",
+            "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
             "scoreboard players add DAY_COUNTER dayCounter 1",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter"
@@ -386,7 +391,7 @@ class BehaviorPackGenerator:
             "tickingarea remove_all",
             "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
             "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
-            "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
+            "tickingarea add 276 0 -2205 310 120 -2060 maze_templates_clock",
             "gamerule commandblockoutput false",
             "gamerule sendcommandfeedback true",
             "gamerule doimmediaterespawn true",
@@ -405,7 +410,10 @@ class BehaviorPackGenerator:
             "scoreboard players set #world is_night 0",
             "scoreboard players set #world cycle_ran 0",
             "scoreboard players set #timer day_timer 0",
+            "setblock 286 99 -2168 bedrock",
+            "setblock 287 99 -2168 bedrock",
             "setblock 286 100 -2168 daylight_detector",
+            "setblock 287 100 -2168 redstone_wire",
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players set #world {safe_name}_initialized 1",
             f"function {safe_name}/cycle_morning",
@@ -422,12 +430,13 @@ class BehaviorPackGenerator:
             f"execute unless score #world {safe_name}_initialized matches 1 run function {safe_name}/init_world",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             "execute unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
+            "execute unless block 287 100 -2168 redstone_wire run setblock 287 100 -2168 redstone_wire",
             "# Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
-            'execute if score #world is_night matches 0 if block 286 100 -2168 daylight_detector["redstone_signal"=0] run scoreboard players set #world is_night 1',
+            'execute if score #world is_night matches 0 if block 287 100 -2168 redstone_wire ["redstone_signal"=0] run scoreboard players set #world is_night 1',
             f'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run function {safe_name}/cycle_night',
             'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run scoreboard players set #world cycle_ran 1',
             "# Detector de dia (amanhecer / sono / /time set 1000 / celestial light)",
-            'execute if score #world is_night matches 1 unless block 286 100 -2168 daylight_detector["redstone_signal"=0] run scoreboard players set #world is_night 0',
+            'execute if score #world is_night matches 1 unless block 287 100 -2168 redstone_wire ["redstone_signal"=0] run scoreboard players set #world is_night 0',
             f'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run function {safe_name}/cycle_morning',
             'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run scoreboard players set #world cycle_ran 0'
         ]
