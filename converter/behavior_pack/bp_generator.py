@@ -266,12 +266,33 @@ class BehaviorPackGenerator:
                                         }
                                         npc_slug = day_to_npc.get(day_num)
                                         if npc_slug:
-                                            trans = re.sub(r'matches\s+\d+', f'matches {day_num}.. execute unless entity @e[type={safe_name}:npc_{npc_slug}]', trans)
+                                            trans = re.sub(r'matches\s+\d+', f'matches {day_num}.. unless entity @e[type={safe_name}:npc_{npc_slug}]', trans)
                                 elif "summon" in trans and "matches " in trans:
                                     trans = re.sub(r'matches\s+(\d+)\b', r'matches \1..', trans)
                                 elif "setblock" in trans and "matches 55" in trans:
-                                    trans = re.sub(r'matches\s+55\b', f'matches 55.. execute unless entity @e[type={safe_name}:npc_jorn]', trans)
+                                    trans = re.sub(r'matches\s+55\b', f'matches 55.. unless entity @e[type={safe_name}:npc_jorn]', trans)
                             converted_lines.append(trans)
+
+                    if "generates_npc" in fname:
+                        # Reordena para que tellraw execute antes de summon
+                        # Isso garante que a mensagem execute antes de a entidade existir no mundo
+                        reordered = []
+                        pending_summon = None
+                        for cline in converted_lines:
+                            if "summon" in cline and "matches " in cline:
+                                pending_summon = cline
+                            elif "tellraw" in cline and "matches " in cline and pending_summon:
+                                reordered.append(cline)
+                                reordered.append(pending_summon)
+                                pending_summon = None
+                            else:
+                                if pending_summon:
+                                    reordered.append(pending_summon)
+                                    pending_summon = None
+                                reordered.append(cline)
+                        if pending_summon:
+                            reordered.append(pending_summon)
+                        converted_lines = reordered
 
                     content_str = "\n".join(converted_lines) + "\n"
                     with open(out_func_path, "w", encoding="utf-8") as of:
@@ -328,9 +349,9 @@ class BehaviorPackGenerator:
             "playsound entity.illusioner.prepare_mirror @a 220 64 -2100 0.7 1 0.03",
             "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
-            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
-            'titleraw @a title {"rawtext":[{"text":""},{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
-            'tellraw @a {"rawtext":[{"text":""},{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            'execute as @a run titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"@s","objective":"dayCounter"}}]}',
+            'execute as @a run tellraw @s {"rawtext":[{"text":"§7Day "},{"score":{"name":"@s","objective":"dayCounter"}}]}',
             "function custom/generates_npc",
             "function custom/generates_chest",
             "kill @e[type=villager,tag=!Vil]"
@@ -351,7 +372,7 @@ class BehaviorPackGenerator:
             "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 0.7 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
             "scoreboard players add DAY_COUNTER dayCounter 1",
-            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter"
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter"
         ]
         night_content = "\n".join(night_lines) + "\n"
         for d in (world_func_dir, func_dir, custom_func_dir):
@@ -370,15 +391,21 @@ class BehaviorPackGenerator:
             "gamerule sendcommandfeedback true",
             "gamerule doimmediaterespawn true",
             "gamerule domobspawning false",
+            "gamerule dodaylightcycle true",
             "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add dayCounter dummy",
             "scoreboard objectives add day_timer dummy",
+            "scoreboard objectives add is_night dummy",
+            "scoreboard objectives add cycle_ran dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "scoreboard players add #world dayCounter 0",
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
-            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             "time set 0",
+            "scoreboard players set #world is_night 0",
+            "scoreboard players set #world cycle_ran 0",
             "scoreboard players set #timer day_timer 0",
+            "setblock 286 100 -2168 daylight_detector",
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players set #world {safe_name}_initialized 1",
             f"function {safe_name}/cycle_morning",
@@ -389,16 +416,20 @@ class BehaviorPackGenerator:
             with open(os.path.join(d, "init_world.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(init_content)
 
-        # 4c. Driver de Ticks Contínuo (Sincronização de Placar e Relógio de 24.000 Ticks)
+        # 4c. Driver de Ticks Contínuo (Daylight Detector State Machine + Sincronização)
         tick_lines = [
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"execute unless score #world {safe_name}_initialized matches 1 run function {safe_name}/init_world",
-            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
-            "scoreboard objectives add day_timer dummy",
-            "scoreboard players add #timer day_timer 1",
-            f"execute if score #timer day_timer matches 12000 run function {safe_name}/cycle_night",
-            f"execute if score #timer day_timer matches 24000 run function {safe_name}/cycle_morning",
-            "execute if score #timer day_timer matches 24000.. run scoreboard players set #timer day_timer 0"
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            "execute unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
+            "# Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
+            'execute if score #world is_night matches 0 if block 286 100 -2168 daylight_detector["redstone_signal"=0] run scoreboard players set #world is_night 1',
+            f'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run function {safe_name}/cycle_night',
+            'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run scoreboard players set #world cycle_ran 1',
+            "# Detector de dia (amanhecer / sono / /time set 1000 / celestial light)",
+            'execute if score #world is_night matches 1 unless block 286 100 -2168 daylight_detector["redstone_signal"=0] run scoreboard players set #world is_night 0',
+            f'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run function {safe_name}/cycle_morning',
+            'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run scoreboard players set #world cycle_ran 0'
         ]
         with open(os.path.join(func_dir, "tick.mcfunction"), "w", encoding="utf-8") as f:
             f.write("\n".join(tick_lines) + "\n")

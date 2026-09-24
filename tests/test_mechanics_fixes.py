@@ -81,7 +81,7 @@ class TestMechanicsFixes(unittest.TestCase):
         """Testa a tradução do comando /summon villager com CustomName para entidade customizada Bedrock."""
         cmd = 'execute if score DAY_COUNTER dayCounter matches 4 run summon minecraft:villager 264 59 -2184 {CustomName:\'{"text":"Bruce"}\'}'
         translated = CommandTranslator.translate(cmd, known_npcs={"bruce"}, world_safe_name="mazescapist")
-        expected = "execute if score DAY_COUNTER dayCounter matches 4 run execute unless entity @e[type=mazescapist:npc_bruce] run summon mazescapist:npc_bruce 264 59 -2184"
+        expected = "execute if score DAY_COUNTER dayCounter matches 4 unless entity @e[type=mazescapist:npc_bruce] run summon mazescapist:npc_bruce 264 59 -2184"
         self.assertEqual(translated, expected)
 
     def test_gate_sound_translation(self):
@@ -130,11 +130,12 @@ class TestMechanicsFixes(unittest.TestCase):
 
             self.assertIn("scoreboard objectives add dayCounter dummy", content)
             self.assertIn("scoreboard players add DAY_COUNTER dayCounter 0", content)
+            self.assertIn("setblock 286 100 -2168 daylight_detector", content)
         finally:
             shutil.rmtree(tmp_dir)
 
     def test_tellraw_score_rawtext(self):
-        """Testa se convert_tellraw_json converte scores de dummy players para '*' no rawtext do Bedrock."""
+        """Testa se convert_tellraw_json converte scores de dummy players para '@s' no rawtext do Bedrock."""
         payload = json.dumps([
             "",
             {"text": "Day ", "color": "gray"},
@@ -146,7 +147,7 @@ class TestMechanicsFixes(unittest.TestCase):
         self.assertEqual(len(rawtext), 2)
         score_elem = rawtext[1]
         self.assertIn("score", score_elem)
-        self.assertEqual(score_elem["score"]["name"], "*")
+        self.assertEqual(score_elem["score"]["name"], "@s")
         self.assertEqual(score_elem["score"]["objective"], "dayCounter")
 
     def test_day_cycle_functions_generation(self):
@@ -162,7 +163,8 @@ class TestMechanicsFixes(unittest.TestCase):
             with open(m_func, "r", encoding="utf-8") as f:
                 m_content = f.read()
             self.assertIn("setblock 286 1 -2168 redstone_block", m_content)
-            self.assertIn("titleraw @a title", m_content)
+            self.assertIn("titleraw @s title", m_content)
+            self.assertIn("tellraw @s", m_content)
             self.assertIn("function custom/generates_npc", m_content)
             self.assertIn("function custom/generates_chest", m_content)
 
@@ -173,16 +175,16 @@ class TestMechanicsFixes(unittest.TestCase):
                 n_content = f.read()
             self.assertIn("setblock 287 1 -2168 redstone_block", n_content)
             self.assertIn("scoreboard players add DAY_COUNTER dayCounter 1", n_content)
-            self.assertIn("scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter", n_content)
+            self.assertIn("scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter", n_content)
 
             # tick.mcfunction
             tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")
             self.assertTrue(os.path.exists(tick_func))
             with open(tick_func, "r", encoding="utf-8") as f:
                 t_content = f.read()
-            self.assertIn("scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter", t_content)
-            self.assertIn("execute if score #timer day_timer matches 12000 run function mazerunner/cycle_night", t_content)
-            self.assertIn("execute if score #timer day_timer matches 24000 run function mazerunner/cycle_morning", t_content)
+            self.assertIn("daylight_detector", t_content)
+            self.assertIn("cycle_night", t_content)
+            self.assertIn("cycle_morning", t_content)
         finally:
             shutil.rmtree(tmp_dir)
 

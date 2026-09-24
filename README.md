@@ -35,9 +35,9 @@ This tool solves this problem by analyzing the Java world directly, converting d
   - Translates `/summon` commands to custom entity types and initializes `dayCounter` scoreboards for timed NPC spawns.
   - Automatically incorporates visible NPC nametags (`minecraft:nameable`) and resilient `matches X..` ranges with existence guards to prevent missed spawns or duplications.
 - **Automated Day/Night Cycle & Gate Control Engine**:
-  - Replaces inert underground daylight detectors with an automated 24,000-tick software engine driven by `tick.mcfunction`.
+  - Employs a sky-exposed Daylight Detector state machine in the permanent Glade ticking area (`maze_glade_center`), synchronized in real-time with Minecraft's celestial lighting and `/time set` / bed sleeping transitions.
   - Executes `cycle_morning` (opens gates, displays Day X title/chat, triggers NPC and supply chest spawns) and `cycle_night` (closes gates, plays gate audio, increments day counter).
-  - Resolves Bedrock rawtext limitations by mapping dummy player scoreboards to `*` and continuously synchronizing `DAY_COUNTER` scores to all players (`@a`).
+  - Resolves Bedrock rawtext limitations by executing as each player (`execute as @a run titleraw @s ...`) with `name: "@s"`, displaying the accurate synchronized day number on screen and chat.
 - **Idempotent Command Conversion**:
   - Converts `.mcfunction` files to modern Bedrock 1.26.40 syntax.
   - Automatically wraps summon commands with `unless entity @e[type=...]` to ensure **zero duplication** upon repeated execution.
@@ -122,9 +122,9 @@ Esta ferramenta soluciona esse desafio auditando diretamente os arquivos Java, c
   - Traduz invocações `/summon` para as entidades dedicadas e inicializa objetivos de `dayCounter` para spawns temporizados.
   - Adiciona nomes visíveis (`minecraft:nameable`) e faixas resilientes `matches X..` com guarda de existência para garantir que o aldeão sempre apareça e nunca se duplique.
 - **Motor Automatizado de Ciclo Dia/Noite e Portões**:
-  - Substitui sensores de luz solar subterrâneos inertes por um relógio automatizado de 24.000 ticks em software dirigido pelo `tick.mcfunction`.
+  - Implementa uma máquina de estados com Daylight Detector exposto ao céu na área de ticking permanente da Clareira (`maze_glade_center`), sincronizado em tempo real com a luz celeste, transições de sono na cama e comandos `/time set`.
   - Executa `cycle_morning` (abre portões, exibe título/chat "Day X", invoca aldeões e gera baús de suprimentos) e `cycle_night` (fecha portões com bedrock, reproduz sons do portão e avança o contador de dias).
-  - Resolve restrições do Bedrock rawtext convertendo nomes dummy para `*` e sincronizando continuamente o `DAY_COUNTER` com todos os jogadores (`@a`).
+  - Resolve restrições do Bedrock rawtext executando como cada jogador (`execute as @a run titleraw @s ...`) com `name: "@s"`, exibindo o número correto e sincronizado do dia na tela e no chat.
 - **Comandos Idempotentes**:
   - Converte `.mcfunction` para a sintaxe moderna do Bedrock 1.26.40.
   - Adiciona automaticamente a cláusula `unless entity @e[type=...]` para impedir duplicações mesmo se a função for acionada repetidamente.

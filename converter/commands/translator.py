@@ -123,7 +123,7 @@ class CommandTranslator:
                         score_dict = dict(node["score"])
                         name_val = str(score_dict.get("name", ""))
                         if not name_val.startswith("@"):
-                            score_dict["name"] = "*"
+                            score_dict["name"] = "@s"
                         rawtext_elements.append({"score": score_dict})
                         return
                     prefix = ""
@@ -168,6 +168,10 @@ class CommandTranslator:
         if s.startswith('/'):
             s = s[1:].strip()
 
+        # Correção de erros tipográficos em comandos herdados (ex: xecute -> execute)
+        if s.startswith("xecute "):
+            s = "execute " + s[7:].strip()
+
         # Suporte recursivo a execute ... run <subcommand>
         if s.startswith("execute ") and " run " in s:
             exec_prefix, run_cmd = s.split(" run ", 1)
@@ -179,6 +183,9 @@ class CommandTranslator:
             # Normalização de namespace em chamadas de função
             exec_prefix = re.sub(r'\bfunction\s+([a-zA-Z0-9._-]+):([a-zA-Z0-9._/-]+)', r'function \1/\2', exec_prefix)
             trans_inner = cls.translate(run_cmd, known_npcs, world_safe_name)
+            if trans_inner.startswith("execute "):
+                subcmd = trans_inner[len("execute "):]
+                return f"{exec_prefix} {subcmd}"
             return f"{exec_prefix} run {trans_inner}"
 
         # 1. forceload -> tickingarea funcional
