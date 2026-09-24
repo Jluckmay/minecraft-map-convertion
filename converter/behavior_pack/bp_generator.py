@@ -277,6 +277,10 @@ class BehaviorPackGenerator:
                                     trans = re.sub(r'matches\s+55\b', f'matches 55.. unless entity @e[type={safe_name}:npc_jorn]', trans)
                             converted_lines.append(trans)
 
+                    if "a_tp_spawn" in fname:
+                        converted_lines.insert(0, f"execute if score #world {safe_name}_initialized matches 0 run function {safe_name}/init_world")
+                        converted_lines.insert(0, f"execute unless block 286 100 -2168 daylight_detector run function {safe_name}/init_world")
+
                     if "generates_npc" in fname:
                         # Reordena para que tellraw execute antes de summon
                         # Isso garante que a mensagem execute antes de a entidade existir no mundo
@@ -390,18 +394,14 @@ class BehaviorPackGenerator:
         # 4b. Inicialização do Mundo e Ticking Areas Enxutas (<100 chunks)
         init_lines = [
             f"# {world_name} Initialization for Bedrock 1.21+",
-            f"scoreboard objectives add {safe_name}_initialized dummy",
-            f"scoreboard players set #world {safe_name}_initialized 1",
-            "# Limpa ticking areas residuais para garantir orcamento de chunks (<100)",
-            "tickingarea remove_all",
-            "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
-            "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
-            "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             "gamerule commandblockoutput false",
             "gamerule sendcommandfeedback true",
             "gamerule doimmediaterespawn true",
             "gamerule domobspawning false",
             "gamerule dodaylightcycle true",
+            "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
+            "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
+            "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add dayCounter dummy",
             "scoreboard objectives add day_timer dummy",
@@ -422,6 +422,8 @@ class BehaviorPackGenerator:
             "setblock 286 100 -2168 daylight_detector",
             "setblock 287 100 -2168 daylight_detector_inverted",
             f"function {safe_name}/cycle_morning",
+            f"scoreboard objectives add {safe_name}_initialized dummy",
+            f"scoreboard players set #world {safe_name}_initialized 1",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
         init_content = "\n".join(init_lines) + "\n"
@@ -445,32 +447,49 @@ class BehaviorPackGenerator:
 
         # 4d. Driver de Ticks Contínuo (Daylight Detector State Machine + Sincronização)
         tick_lines = [
+            f"# 1. Ticking areas permanentes",
+            f"execute unless score #world areas_added matches 1 run tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
+            f"execute unless score #world areas_added matches 1 run tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
+            f"scoreboard objectives add areas_added dummy",
+            f"scoreboard players set #world areas_added 1",
+            f"# 2. Inicializacao automatica ao entrar no mundo (dispara assim que qualquer jogador entra e o chunk estiver pronto)",
             f"scoreboard objectives add {safe_name}_initialized dummy",
             f"scoreboard players add #world {safe_name}_initialized 0",
-            f"execute if score #world {safe_name}_initialized matches 0 run function {safe_name}/init_world",
-            f"execute if score #world {safe_name}_initialized matches 0 run function init_world",
+            f"execute if entity @a if score #world {safe_name}_initialized matches 0 unless block 286 100 -2168 daylight_detector run function {safe_name}/init_world",
+            f"execute if entity @a if score #world {safe_name}_initialized matches 0 unless block 286 100 -2168 daylight_detector run function init_world",
+            f"execute if entity @a if score #world {safe_name}_initialized matches 0 if block 286 100 -2168 daylight_detector run scoreboard players set #world {safe_name}_initialized 1",
+            f"# 3. Sincronizacao continua do contador de dias",
             "scoreboard players add @a dayCounter 0",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {safe_name}/player_join",
-            "execute unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
-            "execute unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
-            "# Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
+            f"# 4. Manutencao dos detectores de ciclo dia/noite",
+            f"execute if score #world {safe_name}_initialized matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
+            f"execute if score #world {safe_name}_initialized matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
+            f"# 5. Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
             'execute if score #world is_night matches 0 if block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 1',
             f'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run function {safe_name}/cycle_night',
             'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run scoreboard players set #world cycle_ran 1',
-            "# Detector de dia (amanhecer / sono / /time set 1000 / celestial light)",
+            f"# 6. Detector de dia (amanhecer / sono / /time set 1000 / celestial light)",
             'execute if score #world is_night matches 1 unless block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 0',
             f'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run function {safe_name}/cycle_morning',
             'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run scoreboard players set #world cycle_ran 0'
         ]
-        with open(os.path.join(func_dir, "tick.mcfunction"), "w", encoding="utf-8") as f:
-            f.write("\n".join(tick_lines) + "\n")
-        # tick.json DEVE estar em functions/tick.json no Bedrock
-        with open(os.path.join(func_dir, "tick.json"), "w", encoding="utf-8") as f:
-            json.dump({"values": ["tick"]}, f, indent=2)
-        with open(os.path.join(target_bp_dir, "tick.json"), "w", encoding="utf-8") as f:
-            json.dump({"values": ["tick"]}, f, indent=2)
+        tick_content = "\n".join(tick_lines) + "\n"
+        for d in (func_dir, world_func_dir, custom_func_dir):
+            with open(os.path.join(d, "tick.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(tick_content)
+
+        # Garante que tick.json legado na raiz do BP seja removido
+        stale_tick = os.path.join(target_bp_dir, "tick.json")
+        if os.path.exists(stale_tick):
+            os.remove(stale_tick)
+
+        # tick.json configurado na pasta functions/ (e subpastas de funcoes)
+        tick_json_data = {"values": ["tick"]}
+        for d in (func_dir, world_func_dir, custom_func_dir):
+            with open(os.path.join(d, "tick.json"), "w", encoding="utf-8") as f:
+                json.dump(tick_json_data, f, indent=2)
 
         return {
             "header_uuid": bp_header_uuid,

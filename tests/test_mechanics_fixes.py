@@ -186,7 +186,10 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("cycle_night", t_content)
             self.assertIn("cycle_morning", t_content)
             self.assertIn("scoreboard players add #world mazerunner_initialized 0", t_content)
+            self.assertIn("unless block 286 100 -2168 daylight_detector", t_content)
             self.assertIn("player_join", t_content)
+            self.assertFalse(os.path.exists(os.path.join(target_bp, "tick.json")))
+            self.assertTrue(os.path.exists(os.path.join(target_bp, "functions", "tick.json")))
 
             # player_join.mcfunction
             join_func = os.path.join(target_bp, "functions", "mazerunner", "player_join.mcfunction")
