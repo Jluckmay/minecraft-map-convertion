@@ -135,7 +135,7 @@ class TestMechanicsFixes(unittest.TestCase):
             shutil.rmtree(tmp_dir)
 
     def test_tellraw_score_rawtext(self):
-        """Testa se convert_tellraw_json converte scores de dummy players para '*' no rawtext do Bedrock."""
+        """Testa se convert_tellraw_json converte scores de dummy players para '@p' no rawtext do Bedrock."""
         payload = json.dumps([
             "",
             {"text": "Day ", "color": "gray"},
@@ -147,7 +147,7 @@ class TestMechanicsFixes(unittest.TestCase):
         self.assertEqual(len(rawtext), 2)
         score_elem = rawtext[1]
         self.assertIn("score", score_elem)
-        self.assertEqual(score_elem["score"]["name"], "*")
+        self.assertEqual(score_elem["score"]["name"], "@p")
         self.assertEqual(score_elem["score"]["objective"], "dayCounter")
 
     def test_day_cycle_functions_generation(self):
@@ -163,8 +163,8 @@ class TestMechanicsFixes(unittest.TestCase):
             with open(m_func, "r", encoding="utf-8") as f:
                 m_content = f.read()
             self.assertIn("setblock 286 1 -2168 redstone_block", m_content)
-            self.assertIn("titleraw @s title", m_content)
-            self.assertIn("tellraw @s", m_content)
+            self.assertIn("titleraw @a title", m_content)
+            self.assertIn("tellraw @a", m_content)
             self.assertIn("function custom/generates_npc", m_content)
             self.assertIn("function custom/generates_chest", m_content)
 
@@ -175,7 +175,7 @@ class TestMechanicsFixes(unittest.TestCase):
                 n_content = f.read()
             self.assertIn("setblock 287 1 -2168 redstone_block", n_content)
             self.assertIn("scoreboard players add DAY_COUNTER dayCounter 1", n_content)
-            self.assertIn("scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter", n_content)
+            self.assertIn("scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter", n_content)
 
             # tick.mcfunction
             tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")

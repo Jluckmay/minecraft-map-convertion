@@ -1287,7 +1287,7 @@ class MapConverterApp:
         ent_bp = {
             "format_version": "1.16.0",
             "minecraft:entity": {
-                "description": {"identifier": ent_id, "is_spawnable": True, "is_summonable": True, "is_experimental": False},
+                "description": {"identifier": ent_id, "runtime_identifier": "minecraft:villager_v2", "is_spawnable": True, "is_summonable": True, "is_experimental": False},
                 "components": {
                     "minecraft:type_family": {"family": ["villager", "npc", "mob"]},
                     "minecraft:breathable": {"total_supply": 15, "suffocate_time": 0},
@@ -1358,11 +1358,10 @@ class MapConverterApp:
             "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 10.0 1 0.03",
             "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            'execute as @a run titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"@s","objective":"dayCounter"}}]}',
-            'execute as @a run tellraw @s {"rawtext":[{"text":"§7Day "},{"score":{"name":"@s","objective":"dayCounter"}}]}',
-            'execute as @a run titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
-            'execute as @a run tellraw @s {"rawtext":[{"text":"§7Day "},{"score":{"name":"*","objective":"dayCounter"}}]}',
+            'titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"@p","objective":"dayCounter"}}]}',
+            'tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"@p","objective":"dayCounter"}}]}',
             "function custom/generates_npc",
             "function custom/generates_chest",
             "kill @e[type=villager,tag=!Vil]"
@@ -1389,6 +1388,7 @@ class MapConverterApp:
             "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
             "scoreboard players add DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter"
         ]
         night_content = "\n".join(night_lines) + "\n"
@@ -1402,7 +1402,6 @@ class MapConverterApp:
             "tickingarea remove_all",
             "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
             "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
-            "tickingarea add 276 0 -2205 310 120 -2060 maze_templates_clock",
             "gamerule commandblockoutput false",
             "gamerule sendcommandfeedback true",
             "gamerule doimmediaterespawn true",
@@ -1416,7 +1415,9 @@ class MapConverterApp:
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "scoreboard players add #world dayCounter 0",
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            "scoreboard players set @a dayCounter 1",
             "time set 0",
             "scoreboard players set #world is_night 0",
             "scoreboard players set #world cycle_ran 0",
@@ -1424,7 +1425,7 @@ class MapConverterApp:
             "setblock 286 99 -2168 bedrock",
             "setblock 287 99 -2168 bedrock",
             "setblock 286 100 -2168 daylight_detector",
-            "setblock 287 100 -2168 redstone_wire",
+            "setblock 287 100 -2168 daylight_detector_inverted",
             f"scoreboard objectives add {self.safe_name}_initialized dummy",
             f"scoreboard players set #world {self.safe_name}_initialized 1",
             f"function {self.safe_name}/cycle_morning",
@@ -1439,17 +1440,16 @@ class MapConverterApp:
         tick_lines = [
             f"scoreboard objectives add {self.safe_name}_initialized dummy",
             f"execute unless score #world {self.safe_name}_initialized matches 1 run function {self.safe_name}/init_world",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             "execute unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
-            "execute unless block 287 100 -2168 redstone_wire run setblock 287 100 -2168 redstone_wire",
+            "execute unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
             "# Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
-            'execute if score #world is_night matches 0 if block 286 100 -2168 daylight_detector["redstone_signal"=0] run scoreboard players set #world is_night 1',
-            'execute if score #world is_night matches 0 if block 287 100 -2168 redstone_wire ["redstone_signal"=0] run scoreboard players set #world is_night 1',
+            'execute if score #world is_night matches 0 if block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 1',
             f'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run function {self.safe_name}/cycle_night',
             'execute if score #world is_night matches 1 if score #world cycle_ran matches 0 run scoreboard players set #world cycle_ran 1',
             "# Detector de dia (amanhecer / sono / /time set 1000 / celestial light)",
-            'execute if score #world is_night matches 1 unless block 286 100 -2168 daylight_detector["redstone_signal"=0] run scoreboard players set #world is_night 0',
-            'execute if score #world is_night matches 1 unless block 287 100 -2168 redstone_wire ["redstone_signal"=0] run scoreboard players set #world is_night 0',
+            'execute if score #world is_night matches 1 unless block 286 100 -2168 daylight_detector ["redstone_signal"=0] run scoreboard players set #world is_night 0',
             f'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run function {self.safe_name}/cycle_morning',
             'execute if score #world is_night matches 0 if score #world cycle_ran matches 1 run scoreboard players set #world cycle_ran 0'
         ]
