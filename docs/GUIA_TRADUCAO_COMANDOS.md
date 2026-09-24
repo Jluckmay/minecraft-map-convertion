@@ -55,6 +55,10 @@ Este guia documenta como o motor do `map_converter.py` traduz a sintaxe de coman
 #### 1.4. `/forceload` $\rightarrow$ `/tickingarea`
 - O comando `/forceload` da Java Edition é documentado como comentário na função e substituído pela criação de simulação contínua com `/tickingarea` na inicialização do mundo, respeitando o limite máximo do motor de 100 chunks por área.
 
+#### 1.5. Resolução de Placar em `/tellraw` e `/titleraw`
+- A Java Edition resolve placares de fake players nativamente em JSON (ex: `{"score": {"name": "DAY_COUNTER", "objective": "dayCounter"}}`).
+- O Bedrock Edition também resolve nativamente nomes literais de fake players no componente `score` do `rawtext`. O tradutor preserva o nome `DAY_COUNTER` original, enquanto o behavior pack inicializa e sincroniza o contador com `@a` (`scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter`).
+
 ---
 
 <a name="english-en"></a>
@@ -106,9 +110,9 @@ This guide documents how the `map_converter.py` engine translates Java Edition c
 #### 1.4. `/forceload` $\rightarrow$ `/tickingarea`
 - Java `/forceload` lines are documented as informative comments in functions and replaced by persistent simulation areas using `/tickingarea` during world initialization, respecting the 100-chunk world-wide engine limit.
 
-#### 1.5. `/tellraw` e `/titleraw` Scoreboard Resolution
+#### 1.5. `/tellraw` and `/titleraw` Scoreboard Resolution
 - Java Edition resolves dummy player scoreboards natively in JSON text (e.g. `{"score": {"name": "DAY_COUNTER", "objective": "dayCounter"}}`).
-- Bedrock Edition requires player/entity selectors (`*`, `@s`, `@p`). The translator automatically converts dummy score names to `"name": "*"` and the behavior pack continuously synchronizes scores to `@a` (`scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter`).
+- Bedrock Edition natively resolves literal fake player names in the `rawtext` score component (`{"score": {"name": "DAY_COUNTER", "objective": "dayCounter"}}`). The translator preserves the original scoreboard holder name directly, while the behavior pack initializes and synchronizes the day counter to `@a` (`scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter`).
 
 #### 1.6. Motor Automatizado de Ciclo Dia/Noite (`tick.mcfunction`)
 - Como sensores de luz solar sob blocos opacos permanecem inertes no Bedrock (`sky light = 0`), a alternância de dia e noite é dirigida com precisão em software pelo `tick.mcfunction` (relógio de 24.000 ticks):

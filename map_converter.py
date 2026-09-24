@@ -403,8 +403,6 @@ class DatapackConverter:
                 elif isinstance(node, dict):
                     if "score" in node:
                         sc = dict(node["score"])
-                        if not str(sc.get("name", "")).startswith("@"):
-                            sc["name"] = "*"
                         rawtext_elements.append({"score": sc})
                     else:
                         txt = node.get("text", "")
@@ -447,8 +445,6 @@ class DatapackConverter:
                 elif isinstance(node, dict):
                     if "score" in node:
                         sc = dict(node["score"])
-                        if not str(sc.get("name", "")).startswith("@"):
-                            sc["name"] = "*"
                         rawtext_elements.append({"score": sc})
                     else:
                         txt = node.get("text", "")
@@ -1360,8 +1356,8 @@ class MapConverterApp:
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            'titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"@p","objective":"dayCounter"}}]}',
-            'tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"@p","objective":"dayCounter"}}]}',
+            'titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
+            'tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             "function custom/generates_npc",
             "function custom/generates_chest",
             "kill @e[type=villager,tag=!Vil]"
@@ -1415,9 +1411,9 @@ class MapConverterApp:
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "scoreboard players add #world dayCounter 0",
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players add @a dayCounter 0",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            "scoreboard players set @a dayCounter 1",
             "time set 0",
             "scoreboard players set #world is_night 0",
             "scoreboard players set #world cycle_ran 0",
@@ -1440,6 +1436,7 @@ class MapConverterApp:
         tick_lines = [
             f"scoreboard objectives add {self.safe_name}_initialized dummy",
             f"execute unless score #world {self.safe_name}_initialized matches 1 run function {self.safe_name}/init_world",
+            "scoreboard players add @a dayCounter 0",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             "execute unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
