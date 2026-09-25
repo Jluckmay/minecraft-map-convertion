@@ -196,6 +196,16 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("§e§lopening", mg_content)
             self.assertIn("execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1", mg_content)
 
+            # generates_npc
+            gn_func = os.path.join(target_bp, "functions", "mazerunner", "generates_npc.mcfunction")
+            self.assertTrue(os.path.exists(gn_func))
+            with open(gn_func, "r", encoding="utf-8") as f:
+                gn_content = f.read()
+            self.assertIn("minecraft:spawn_farmer", gn_content)
+            self.assertIn("tag @e[name=\"Bruce\"] add Vil", gn_content)
+            self.assertIn("tag @e[name=\"Boris\"] add Vil", gn_content)
+            self.assertIn("villager_v2 264 59 -2184", gn_content)
+
             # tick.mcfunction
             tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")
             self.assertTrue(os.path.exists(tick_func))

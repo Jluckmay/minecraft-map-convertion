@@ -850,6 +850,8 @@ class BedrockLevelDBManager:
                                         coord = (int(tag.get("x", 0)), int(tag.get("y", 0)), int(tag.get("z", 0)))
                                         if safe_name and coord == (276, 1, -2191):
                                             new_cmd = f"function {safe_name}/morning_gate"
+                                        elif safe_name and coord == (279, 1, -2191):
+                                            new_cmd = f"function {safe_name}/generates_npc"
                                         elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
                                             new_cmd = f"function {safe_name}/cycle_night"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
@@ -1398,6 +1400,67 @@ class MapConverterApp:
         for d in (func_dir, root_func_dir, custom_func_dir):
             with open(os.path.join(d, "morning_gate.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(morning_gate_content)
+
+        # 1c. Função de Invocação de Aldeões / Newcomers na Área de Carga (acoplada ao bloco em 279 1 -2191)
+        generates_npc_lines = [
+            f"# {self.world_name} Newcomer Villagers Spawning in Loading Area",
+            "",
+            "# Day 4: Bruce (Farmer)",
+            'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name="Bruce"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name="Bruce"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_farmer "Bruce"',
+            'tag @e[name="Bruce"] add Vil',
+            "",
+            "# Day 9: Boris (Shepherd)",
+            'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name="Boris"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name="Boris"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_shepherd "Boris"',
+            'tag @e[name="Boris"] add Vil',
+            "",
+            "# Day 13: Joe (Fletcher)",
+            'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name="Joe"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name="Joe"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_fletcher "Joe"',
+            'tag @e[name="Joe"] add Vil',
+            "",
+            "# Day 17: Tobias (Weaponsmith)",
+            'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name="Tobias"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name="Tobias"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_weaponsmith "Tobias"',
+            'tag @e[name="Tobias"] add Vil',
+            "",
+            "# Day 21: George (Butcher)",
+            'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name="George"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name="George"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_butcher "George"',
+            'tag @e[name="George"] add Vil',
+            "",
+            "# Day 26: Erik (Cleric)",
+            'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name="Erik"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name="Erik"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_cleric "Erik"',
+            'tag @e[name="Erik"] add Vil',
+            "",
+            "# Day 31: Adam (Mason)",
+            'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name="Adam"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name="Adam"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_mason "Adam"',
+            'tag @e[name="Adam"] add Vil',
+            "",
+            "# Day 38: Joakim (Armorer)",
+            'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name="Joakim"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name="Joakim"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_armorer "Joakim"',
+            'tag @e[name="Joakim"] add Vil',
+            "",
+            "# Day 47: Seth (Librarian)",
+            'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name="Seth"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name="Seth"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_librarian "Seth"',
+            'tag @e[name="Seth"] add Vil',
+            "",
+            "# Day 55: Jørn (Cartographer) & Redstone Trigger",
+            'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name="Jørn"] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
+            'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name="Jørn"] run summon villager_v2 264 59 -2184 0 0 minecraft:spawn_cartographer "Jørn"',
+            'tag @e[name="Jørn"] add Vil',
+            'tag @e[name="Jorn"] add Vil',
+            'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name="Jørn"] run setblock 279 1 -2177 redstone_block'
+        ]
+        generates_npc_content = "\n".join(generates_npc_lines) + "\n"
+        for d in (func_dir, root_func_dir, custom_func_dir):
+            with open(os.path.join(d, "generates_npc.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(generates_npc_content)
 
         # 2. Ciclo da Noite (Fechamento de portões, áudio e avanço do contador de dias)
         night_lines = [

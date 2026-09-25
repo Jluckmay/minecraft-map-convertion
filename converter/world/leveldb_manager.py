@@ -214,6 +214,8 @@ class BedrockLevelDBManager:
                                     coord = (int(tag.get("x", 0)), int(tag.get("y", 0)), int(tag.get("z", 0)))
                                     if safe_name and coord == (276, 1, -2191):
                                         new_cmd = f"function {safe_name}/morning_gate"
+                                    elif safe_name and coord == (279, 1, -2191):
+                                        new_cmd = f"function {safe_name}/generates_npc"
                                     elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
                                         new_cmd = f"function {safe_name}/cycle_night"
                                     elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
@@ -271,6 +273,8 @@ class BedrockLevelDBManager:
                                         coord = (int(tag.get("x", 0)), int(tag.get("y", 0)), int(tag.get("z", 0)))
                                         if safe_name and coord == (276, 1, -2191):
                                             new_cmd = f"function {safe_name}/morning_gate"
+                                        elif safe_name and coord == (279, 1, -2191):
+                                            new_cmd = f"function {safe_name}/generates_npc"
                                         elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
                                             new_cmd = f"function {safe_name}/cycle_night"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
