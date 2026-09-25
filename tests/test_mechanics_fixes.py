@@ -185,6 +185,16 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("setblock 287 1 -2168 redstone_block", n_content)
             self.assertIn("scoreboard players add DAY_COUNTER dayCounter 1", n_content)
             self.assertIn("scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter", n_content)
+            self.assertNotIn('"closing"', n_content)
+
+            # morning_gate
+            mg_func = os.path.join(target_bp, "functions", "mazerunner", "morning_gate.mcfunction")
+            self.assertTrue(os.path.exists(mg_func))
+            with open(mg_func, "r", encoding="utf-8") as f:
+                mg_content = f.read()
+            self.assertIn("The gates are ", mg_content)
+            self.assertIn("opening", mg_content)
+            self.assertIn("execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1", mg_content)
 
             # tick.mcfunction
             tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")

@@ -363,11 +363,6 @@ class BehaviorPackGenerator:
             "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 10.0 1 0.03",
             "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
-            'scoreboard objectives add dayCounter dummy "Dias"',
-            "scoreboard players add DAY_COUNTER dayCounter 0",
-            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
-            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
-            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             'titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             'tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             "function custom/generates_npc",
@@ -379,15 +374,31 @@ class BehaviorPackGenerator:
             with open(os.path.join(d, "cycle_morning.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(morning_content)
 
+        # 4a-2. Função de Abertura do Portão e Inicialização do Contador Matinal (acoplada ao bloco em 276 1 -2191)
+        morning_gate_lines = [
+            f"# {world_name} Morning Gate Opening & Day Counter Initialization",
+            'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard objectives add DAY_COUNTER dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"opening","color":"yellow","bold":true}},{{"text":"..."}}]}}'
+        ]
+        morning_gate_content = "\n".join(morning_gate_lines) + "\n"
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "morning_gate.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(morning_gate_content)
+
         night_lines = [
             f"# {world_name} Night Cycle - Gate closing & day counter increment",
             'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add DAY_COUNTER dayCounter 1",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"closing","color":"yellow","bold":true}},{{"text":"..."}}]}}',
             "setblock 287 1 -2168 redstone_block",
             "setblock 164 44 -2210 redstone_block",
             "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 10.0 1 0.03",
@@ -414,6 +425,7 @@ class BehaviorPackGenerator:
             "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
             "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add day_timer dummy",
             "scoreboard objectives add is_night dummy",
             "scoreboard objectives add cycle_ran dummy",
@@ -447,9 +459,9 @@ class BehaviorPackGenerator:
             f"# {world_name} Player Join Handler",
             "tag @s add joined",
             'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add world_init dummy",
             "scoreboard players add #world world_init 0",
-            "execute unless score #world world_init matches 0.. run scoreboard players set #world world_init 0",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @s dayCounter 0",
@@ -468,17 +480,18 @@ class BehaviorPackGenerator:
             f"# 1. Ticking areas permanentes",
             f"scoreboard objectives add areas_added dummy",
             f"scoreboard players add #world areas_added 0",
-            f"execute unless score #world areas_added matches 1 run tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
-            f"execute unless score #world areas_added matches 1 run tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
+            f"execute if score #world areas_added matches 0 run tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
+            f"execute if score #world areas_added matches 0 run tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             f"scoreboard players set #world areas_added 1",
             f"# 2. Inicializacao automatica do mundo e do contador ao entrar o primeiro jogador",
             f"scoreboard objectives add world_init dummy",
-            f'scoreboard objectives add dayCounter dummy "Dias"',
             f"scoreboard players add #world world_init 0",
             f"execute unless score #world world_init matches 0.. run scoreboard players set #world world_init 0",
             f"execute if entity @a if score #world world_init matches 0 run function {safe_name}/init_world",
             f"execute if entity @a if score #world world_init matches 0 run function init_world",
             f"# 3. Sincronizacao continua do contador de dias e garantia de DAY_COUNTER >= 1",
+            'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @a dayCounter 0",
