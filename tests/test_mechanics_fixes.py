@@ -201,10 +201,11 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertTrue(os.path.exists(gn_func))
             with open(gn_func, "r", encoding="utf-8") as f:
                 gn_content = f.read()
-            self.assertIn("minecraft:spawn_farmer", gn_content)
-            self.assertIn("tag @e[name=\"Bruce\"] add Vil", gn_content)
-            self.assertIn("tag @e[name=\"Boris\"] add Vil", gn_content)
-            self.assertIn("villager_v2 264 59 -2184", gn_content)
+            self.assertIn("summon villager Bruce 264 59 -2184", gn_content)
+            self.assertIn("tag @e[name=Bruce] add Vil", gn_content)
+            self.assertIn("tag @e[name=Boris] add Vil", gn_content)
+            self.assertIn("tag @e[name=Jorn] add Vil", gn_content)
+            self.assertIn("tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil", gn_content)
 
             # tick.mcfunction
             tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")
