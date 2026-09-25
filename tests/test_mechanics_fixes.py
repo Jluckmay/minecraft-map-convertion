@@ -193,7 +193,7 @@ class TestMechanicsFixes(unittest.TestCase):
             with open(mg_func, "r", encoding="utf-8") as f:
                 mg_content = f.read()
             self.assertIn("The gates are ", mg_content)
-            self.assertIn("opening", mg_content)
+            self.assertIn("§e§lopening", mg_content)
             self.assertIn("execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1", mg_content)
 
             # tick.mcfunction

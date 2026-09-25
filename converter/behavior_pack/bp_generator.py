@@ -355,7 +355,7 @@ class BehaviorPackGenerator:
             "execute if score DAY_COUNTER dayCounter matches ..0 run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"opening","color":"yellow","bold":true}},{{"text":"..."}}]}}',
+            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"§e§lopening"}},{{"text":"..."}}]}}',
             "setblock 286 1 -2168 redstone_block",
             "playsound entity.illusioner.prepare_mirror @a 173 64 -2148 10.0 1 0.03",
             "playsound entity.illusioner.prepare_mirror @a 220 64 -2195 10.0 1 0.03",
@@ -383,7 +383,7 @@ class BehaviorPackGenerator:
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"opening","color":"yellow","bold":true}},{{"text":"..."}}]}}'
+            f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"§e§lopening"}},{{"text":"..."}}]}}'
         ]
         morning_gate_content = "\n".join(morning_gate_lines) + "\n"
         for d in (world_func_dir, func_dir, custom_func_dir):
