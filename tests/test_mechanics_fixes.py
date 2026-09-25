@@ -119,7 +119,8 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertTrue(os.path.exists(rc_file))
             with open(rc_file, "r", encoding="utf-8") as f:
                 rc_data = json.load(f)
-            self.assertIn("controller.render.villager_v2", rc_data.get("render_controllers", {}))
+            self.assertIn("controller.render.npc_villager_base", rc_data.get("render_controllers", {}))
+            self.assertIn("controller.render.npc_villager_masked", rc_data.get("render_controllers", {}))
         finally:
             shutil.rmtree(tmp_dir)
 

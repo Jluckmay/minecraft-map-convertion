@@ -271,8 +271,19 @@ class ResourcePackGenerator:
                             data = json.load(f)
                         desc = data.get("minecraft:client_entity", {}).get("description", {})
                         if desc:
-                            if "materials" in desc:
-                                desc["materials"]["default"] = "entity_alphatest"
+                            desc["materials"] = {
+                                "default": "villager_v2",
+                                "masked": "villager_v2_masked"
+                            }
+                            desc["render_controllers"] = [
+                                "controller.render.npc_villager_base",
+                                "controller.render.npc_villager_masked"
+                            ]
+                            if "textures" in desc:
+                                if "default" in desc["textures"] and "base" not in desc["textures"]:
+                                    desc["textures"]["base"] = desc["textures"]["default"]
+                                if desc["textures"].get("profession") == "textures/entity/villager2/professions/mason":
+                                    desc["textures"]["profession"] = "textures/entity/villager2/professions/stonemason"
                             if "animations" not in desc:
                                 desc["animations"] = {
                                     "general": "animation.villager.general",
@@ -299,8 +310,14 @@ class ResourcePackGenerator:
                             desc = data.get("minecraft:client_entity", {}).get("description", {})
                             if desc:
                                 desc["identifier"] = f"{safe_name}:npc_jorn"
-                                if "materials" in desc:
-                                    desc["materials"]["default"] = "entity_alphatest"
+                                desc["materials"] = {
+                                    "default": "villager_v2",
+                                    "masked": "villager_v2_masked"
+                                }
+                                desc["render_controllers"] = [
+                                    "controller.render.npc_villager_base",
+                                    "controller.render.npc_villager_masked"
+                                ]
                             with open(os.path.join(target_ent_dir, "npc_jorn.entity.json"), "w", encoding="utf-8") as f:
                                 json.dump(data, f, indent=2)
                         except Exception:
@@ -312,15 +329,32 @@ class ResourcePackGenerator:
         rc_data = {
             "format_version": "1.8.0",
             "render_controllers": {
+                "controller.render.npc_villager_base": {
+                    "geometry": "Geometry.default",
+                    "materials": [
+                        {"*": "Material.default"}
+                    ],
+                    "textures": [
+                        "Texture.default"
+                    ]
+                },
+                "controller.render.npc_villager_masked": {
+                    "geometry": "Geometry.default",
+                    "materials": [
+                        {"*": "Material.masked"}
+                    ],
+                    "textures": [
+                        "Texture.biome",
+                        "Texture.profession"
+                    ]
+                },
                 "controller.render.villager_v2": {
                     "geometry": "Geometry.default",
                     "materials": [
                         {"*": "Material.default"}
                     ],
                     "textures": [
-                        "Texture.default",
-                        "Texture.biome",
-                        "Texture.profession"
+                        "Texture.default"
                     ]
                 }
             }

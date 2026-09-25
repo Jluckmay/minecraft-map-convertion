@@ -1351,15 +1351,20 @@ class MapConverterApp:
             json.dump(ent_bp, f, indent=2)
 
         # 3. RP Client Entity JSON
+        prof_tex = "stonemason" if profession == "mason" else profession
         ent_rp = {
             "format_version": "1.10.0",
             "minecraft:client_entity": {
                 "description": {
                     "identifier": ent_id,
-                    "materials": {"default": "entity_alphatest"},
+                    "materials": {
+                        "default": "villager_v2",
+                        "masked": "villager_v2_masked"
+                    },
                     "textures": {
                         "default": "textures/entity/villager2/villager",
-                        "profession": f"textures/entity/villager2/professions/{profession}",
+                        "base": "textures/entity/villager2/villager",
+                        "profession": f"textures/entity/villager2/professions/{prof_tex}",
                         "biome": f"textures/entity/villager2/biomes/biome_{biome}"
                     },
                     "geometry": {"default": "geometry.villager_v2"},
@@ -1377,7 +1382,10 @@ class MapConverterApp:
                         {"move": "controller.animation.villager_v2.move"},
                         {"raise_arms": "controller.animation.villager_v2.raise_arms"}
                     ],
-                    "render_controllers": ["controller.render.villager_v2"],
+                    "render_controllers": [
+                        "controller.render.npc_villager_base",
+                        "controller.render.npc_villager_masked"
+                    ],
                     "spawn_egg": {"texture": "spawn_egg", "texture_index": 15}
                 }
             }
@@ -1389,25 +1397,41 @@ class MapConverterApp:
         rc_dir = os.path.join(self.rp_dir, "render_controllers")
         os.makedirs(rc_dir, exist_ok=True)
         rc_file = os.path.join(rc_dir, "npc_villager.render_controllers.json")
-        if not os.path.exists(rc_file):
-            rc_data = {
-                "format_version": "1.8.0",
-                "render_controllers": {
-                    "controller.render.villager_v2": {
-                        "geometry": "Geometry.default",
-                        "materials": [
-                            {"*": "Material.default"}
-                        ],
-                        "textures": [
-                            "Texture.default",
-                            "Texture.biome",
-                            "Texture.profession"
-                        ]
-                    }
+        rc_data = {
+            "format_version": "1.8.0",
+            "render_controllers": {
+                "controller.render.npc_villager_base": {
+                    "geometry": "Geometry.default",
+                    "materials": [
+                        {"*": "Material.default"}
+                    ],
+                    "textures": [
+                        "Texture.default"
+                    ]
+                },
+                "controller.render.npc_villager_masked": {
+                    "geometry": "Geometry.default",
+                    "materials": [
+                        {"*": "Material.masked"}
+                    ],
+                    "textures": [
+                        "Texture.biome",
+                        "Texture.profession"
+                    ]
+                },
+                "controller.render.villager_v2": {
+                    "geometry": "Geometry.default",
+                    "materials": [
+                        {"*": "Material.default"}
+                    ],
+                    "textures": [
+                        "Texture.default"
+                    ]
                 }
             }
-            with open(rc_file, "w", encoding="utf-8") as f:
-                json.dump(rc_data, f, indent=2)
+        }
+        with open(rc_file, "w", encoding="utf-8") as f:
+            json.dump(rc_data, f, indent=2)
 
     def _generate_utility_functions(self):
         func_dir = os.path.join(self.bp_dir, "functions", self.safe_name)
