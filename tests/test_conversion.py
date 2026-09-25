@@ -175,8 +175,8 @@ class TestUniversalMapConverter(unittest.TestCase):
             self.assertTrue(os.path.exists(trade_path), "Trade table do NPC Alex não foi gerada")
             with open(trade_path, "r", encoding="utf-8") as f:
                 t_data = json.load(f)
-                self.assertEqual(t_data["tiers"][0]["trades"][0]["wants"][0]["item"], "stick")
-                self.assertEqual(t_data["tiers"][0]["trades"][0]["gives"][0]["item"], "emerald")
+                self.assertIn(t_data["tiers"][0]["trades"][0]["wants"][0]["item"], ("stick", "minecraft:stick"))
+                self.assertIn(t_data["tiers"][0]["trades"][0]["gives"][0]["item"], ("emerald", "minecraft:emerald"))
 
     def test_08_distance_selector_and_functions(self):
         """Testa tradução de seletores distance= para r= e funções com namespace."""

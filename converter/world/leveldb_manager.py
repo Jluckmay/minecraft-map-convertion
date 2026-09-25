@@ -216,6 +216,10 @@ class BedrockLevelDBManager:
                                         new_cmd = f"function {safe_name}/morning_gate"
                                     elif safe_name and coord == (279, 1, -2191):
                                         new_cmd = f"function {safe_name}/generates_npc"
+                                    elif safe_name and coord == (280, 1, -2192):
+                                        new_cmd = f"function {safe_name}/day_display"
+                                    elif safe_name and coord == (279, 1, -2192):
+                                        new_cmd = f"function {safe_name}/day_title"
                                     elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
                                         new_cmd = f"function {safe_name}/cycle_night"
                                     elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
@@ -275,6 +279,10 @@ class BedrockLevelDBManager:
                                             new_cmd = f"function {safe_name}/morning_gate"
                                         elif safe_name and coord == (279, 1, -2191):
                                             new_cmd = f"function {safe_name}/generates_npc"
+                                        elif safe_name and coord == (280, 1, -2192):
+                                            new_cmd = f"function {safe_name}/day_display"
+                                        elif safe_name and coord == (279, 1, -2192):
+                                            new_cmd = f"function {safe_name}/day_title"
                                         elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
                                             new_cmd = f"function {safe_name}/cycle_night"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):

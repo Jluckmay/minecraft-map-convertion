@@ -192,7 +192,41 @@ class BehaviorPackGenerator:
                                     if trades:
                                         os.makedirs(trading_dir, exist_ok=True)
                                         t_file = os.path.join(trading_dir, f"{clean_id}_trades.json")
-                                        trade_data = {"tiers": [{"total_exp_required": 0, "trades": trades}]}
+                                        formatted_trades = []
+                                        for tr in trades:
+                                            ft = {
+                                                "wants": [
+                                                    {
+                                                        "item": f"minecraft:{w['item'].replace('minecraft:', '')}",
+                                                        "quantity": w["quantity"]
+                                                    }
+                                                    for w in tr.get("wants", [])
+                                                ],
+                                                "gives": [
+                                                    {
+                                                        "item": f"minecraft:{g['item'].replace('minecraft:', '')}",
+                                                        "quantity": g["quantity"]
+                                                    }
+                                                    for g in tr.get("gives", [])
+                                                ],
+                                                "max_uses": tr.get("max_uses", 9999),
+                                                "trader_exp": tr.get("trader_exp", 0)
+                                            }
+                                            formatted_trades.append(ft)
+                                        trade_data = {
+                                            "tiers": [
+                                                {
+                                                    "total_exp_required": 0,
+                                                    "groups": [
+                                                        {
+                                                            "num_to_select": len(formatted_trades),
+                                                            "trades": formatted_trades
+                                                        }
+                                                    ],
+                                                    "trades": formatted_trades
+                                                }
+                                            ]
+                                        }
                                         with open(t_file, "w", encoding="utf-8") as tf:
                                             json.dump(trade_data, tf, indent=2)
 
@@ -218,9 +252,14 @@ class BehaviorPackGenerator:
                                                     "minecraft:collision_box": {"width": 0.6, "height": 1.9},
                                                     "minecraft:movement": {"value": 0.0},
                                                     "minecraft:navigation.walk": {"can_path_over_water": True},
+                                                    "minecraft:trade_table": {
+                                                        "display_name": n_val.capitalize(),
+                                                        "table": f"trading/{clean_id}_trades.json"
+                                                    },
                                                     "minecraft:economy_trade_table": {
+                                                        "display_name": n_val.capitalize(),
                                                         "table": f"trading/{clean_id}_trades.json",
-                                                        "convert_trades_economy": True
+                                                        "convert_trades_economy": False
                                                     },
                                                     "minecraft:interact": {
                                                         "interactions": [{
@@ -349,10 +388,10 @@ class BehaviorPackGenerator:
         # 4a. Funções do Motor de Ciclo Dia/Noite (Abertura/Fechamento de Portões, Display e NPCs)
         morning_lines = [
             f"# {world_name} Morning Cycle - Gate opening, day display, NPCs & chests",
-            "scoreboard objectives add dayCounter dummy",
+            'scoreboard objectives add dayCounter dummy "Dias"',
             "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
-            "execute if score DAY_COUNTER dayCounter matches ..0 run scoreboard players set DAY_COUNTER dayCounter 1",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f'tellraw @a {{"rawtext":[{{"text":"The gates are "}},{{"text":"§e§lopening"}},{{"text":"..."}}]}}',
@@ -395,70 +434,121 @@ class BehaviorPackGenerator:
             f"# {world_name} Newcomer Villagers Spawning in Loading Area",
             "",
             "# Day 4: Bruce (Farmer)",
-            'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] run summon villager Bruce 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] unless entity @e[type={safe_name}:npc_bruce] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] unless entity @e[type={safe_name}:npc_bruce] run summon {safe_name}:npc_bruce Bruce 264 59 -2184',
             'tag @e[name=Bruce] add Vil',
+            f'tag @e[type={safe_name}:npc_bruce] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 9: Boris (Shepherd)",
-            'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] run summon villager Boris 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] unless entity @e[type={safe_name}:npc_boris] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] unless entity @e[type={safe_name}:npc_boris] run summon {safe_name}:npc_boris Boris 264 59 -2184',
             'tag @e[name=Boris] add Vil',
+            f'tag @e[type={safe_name}:npc_boris] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 13: Joe (Fletcher)",
-            'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] run summon villager Joe 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] unless entity @e[type={safe_name}:npc_joe] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] unless entity @e[type={safe_name}:npc_joe] run summon {safe_name}:npc_joe Joe 264 59 -2184',
             'tag @e[name=Joe] add Vil',
+            f'tag @e[type={safe_name}:npc_joe] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 17: Tobias (Weaponsmith)",
-            'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] run summon villager Tobias 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] unless entity @e[type={safe_name}:npc_tobias] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] unless entity @e[type={safe_name}:npc_tobias] run summon {safe_name}:npc_tobias Tobias 264 59 -2184',
             'tag @e[name=Tobias] add Vil',
+            f'tag @e[type={safe_name}:npc_tobias] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 21: George (Butcher)",
-            'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] run summon villager George 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] unless entity @e[type={safe_name}:npc_george] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] unless entity @e[type={safe_name}:npc_george] run summon {safe_name}:npc_george George 264 59 -2184',
             'tag @e[name=George] add Vil',
+            f'tag @e[type={safe_name}:npc_george] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 26: Erik (Cleric)",
-            'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] run summon villager Erik 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] unless entity @e[type={safe_name}:npc_erik] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] unless entity @e[type={safe_name}:npc_erik] run summon {safe_name}:npc_erik Erik 264 59 -2184',
             'tag @e[name=Erik] add Vil',
+            f'tag @e[type={safe_name}:npc_erik] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 31: Adam (Mason)",
-            'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] run summon villager Adam 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] unless entity @e[type={safe_name}:npc_adam] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] unless entity @e[type={safe_name}:npc_adam] run summon {safe_name}:npc_adam Adam 264 59 -2184',
             'tag @e[name=Adam] add Vil',
+            f'tag @e[type={safe_name}:npc_adam] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 38: Joakim (Armorer)",
-            'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] run summon villager Joakim 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] unless entity @e[type={safe_name}:npc_joakim] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] unless entity @e[type={safe_name}:npc_joakim] run summon {safe_name}:npc_joakim Joakim 264 59 -2184',
             'tag @e[name=Joakim] add Vil',
+            f'tag @e[type={safe_name}:npc_joakim] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 47: Seth (Librarian)",
-            'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] run summon villager Seth 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] unless entity @e[type={safe_name}:npc_seth] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] unless entity @e[type={safe_name}:npc_seth] run summon {safe_name}:npc_seth Seth 264 59 -2184',
             'tag @e[name=Seth] add Vil',
+            f'tag @e[type={safe_name}:npc_seth] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 55: Jorn (Cartographer) & Redstone Trigger",
-            'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] run tellraw @a {"rawtext":[{"text":"A"},{"text":"§a§l newcomer"},{"text":" has arrived in the"},{"text":"§6§l§o loading area"},{"text":"!"}]}',
-            'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] run summon villager Jorn 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] unless entity @e[type={safe_name}:npc_jorn] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] unless entity @e[type={safe_name}:npc_jorn] run summon {safe_name}:npc_jorn Jorn 264 59 -2184',
             'tag @e[name=Jorn] add Vil',
+            f'tag @e[type={safe_name}:npc_jorn] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] run setblock 279 1 -2177 redstone_block'
         ]
         generates_npc_content = "\n".join(generates_npc_lines) + "\n"
         for d in (world_func_dir, func_dir, custom_func_dir):
             with open(os.path.join(d, "generates_npc.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(generates_npc_content)
+
+        # 4a-4. Funções de Exibição de Dia no Chat e Título (acopladas a 280 1 -2192 e 279 1 -2192)
+        day_display_lines = [
+            f"# {world_name} Day Counter Chat Announcement",
+            'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard objectives add DAY_COUNTER dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            'tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}'
+        ]
+        day_display_content = "\n".join(day_display_lines) + "\n"
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "day_display.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(day_display_content)
+
+        day_title_lines = [
+            f"# {world_name} Day Counter Title Announcement",
+            'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard objectives add DAY_COUNTER dummy",
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            'titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}'
+        ]
+        day_title_content = "\n".join(day_title_lines) + "\n"
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "day_title.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(day_title_content)
 
         night_lines = [
             f"# {world_name} Night Cycle - Gate closing & day counter increment",

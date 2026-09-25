@@ -201,11 +201,30 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertTrue(os.path.exists(gn_func))
             with open(gn_func, "r", encoding="utf-8") as f:
                 gn_content = f.read()
-            self.assertIn("summon villager Bruce 264 59 -2184", gn_content)
+            self.assertIn("summon mazerunner:npc_bruce Bruce 264 59 -2184", gn_content)
             self.assertIn("tag @e[name=Bruce] add Vil", gn_content)
+            self.assertIn("tag @e[type=mazerunner:npc_bruce] add Vil", gn_content)
             self.assertIn("tag @e[name=Boris] add Vil", gn_content)
+            self.assertIn("tag @e[type=mazerunner:npc_boris] add Vil", gn_content)
             self.assertIn("tag @e[name=Jorn] add Vil", gn_content)
+            self.assertIn("tag @e[type=mazerunner:npc_jorn] add Vil", gn_content)
             self.assertIn("tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil", gn_content)
+
+            # day_display
+            dd_func = os.path.join(target_bp, "functions", "mazerunner", "day_display.mcfunction")
+            self.assertTrue(os.path.exists(dd_func))
+            with open(dd_func, "r", encoding="utf-8") as f:
+                dd_content = f.read()
+            self.assertIn("execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1", dd_content)
+            self.assertIn('tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}', dd_content)
+
+            # day_title
+            dt_func = os.path.join(target_bp, "functions", "mazerunner", "day_title.mcfunction")
+            self.assertTrue(os.path.exists(dt_func))
+            with open(dt_func, "r", encoding="utf-8") as f:
+                dt_content = f.read()
+            self.assertIn("execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1", dt_content)
+            self.assertIn('titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}', dt_content)
 
             # tick.mcfunction
             tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")
