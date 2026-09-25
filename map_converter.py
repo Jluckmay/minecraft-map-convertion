@@ -816,7 +816,7 @@ class BedrockLevelDBManager:
         return bytes(out)
 
     @classmethod
-    def update_command_blocks(cls, db_dir: str, convert_func) -> int:
+    def update_command_blocks(cls, db_dir: str, convert_func, safe_name: str = "") -> int:
         """Percorre todos os arquivos .ldb do banco LevelDB e atualiza blocos de comando."""
         if not os.path.exists(db_dir):
             return 0
@@ -846,7 +846,15 @@ class BedrockLevelDBManager:
                                     tag = nbtlib.File.from_fileobj(stream, byteorder="little")
                                     if str(tag.get("id", "")) == "CommandBlock":
                                         cmd = str(tag.get("Command", ""))
-                                        new_cmd = convert_func(cmd)
+                                        x = int(tag.get("x", 0))
+                                        y = int(tag.get("y", 0))
+                                        z = int(tag.get("z", 0))
+                                        if safe_name and (x, y, z) in [(271, 1, -2201), (306, 2, -2102)]:
+                                            new_cmd = f"function {safe_name}/cycle_night"
+                                        elif safe_name and (x, y, z) in [(377, 6, -2117), (273, 1, -2200)]:
+                                            new_cmd = f"function {safe_name}/init_world"
+                                        else:
+                                            new_cmd = convert_func(cmd)
                                         if new_cmd != cmd:
                                             tag["Command"] = nbtlib.String(new_cmd)
                                             entry_modified = True
@@ -948,7 +956,8 @@ class MapConverterApp:
         db_path = os.path.join(self.work_bedrock, "db")
         conv_cbs = BedrockLevelDBManager.update_command_blocks(
             db_path,
-            lambda cmd: DatapackConverter.convert_command(cmd, self.known_npcs, self.safe_name)
+            lambda cmd: DatapackConverter.convert_command(cmd, self.known_npcs, self.safe_name),
+            safe_name=self.safe_name
         )
         print(f"    [OK] Total de blocos de comando convertidos no mundo: {conv_cbs}")
 
@@ -1362,6 +1371,11 @@ class MapConverterApp:
             "playsound entity.illusioner.prepare_mirror @a 268 64 -2148 10.0 1 0.03",
             "playsound mob.evocation_illager.prepare_summon @a ~ ~ ~ 1.0 1 0.03",
             "playsound mob.ghast.scream @a ~ ~ ~ 10000",
+            'scoreboard objectives add dayCounter dummy "Dias"',
+            "scoreboard players add DAY_COUNTER dayCounter 0",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
+            "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
+            "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             'titleraw @a title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             'tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             "function custom/generates_npc",
@@ -1376,10 +1390,9 @@ class MapConverterApp:
         # 2. Ciclo da Noite (Fechamento de portões, áudio e avanço do contador de dias)
         night_lines = [
             f"# {self.world_name} Night Cycle - Gate closing & day counter increment",
-            "scoreboard objectives add dayCounter dummy",
-            "scoreboard objectives add DAY_COUNTER dummy",
+            'scoreboard objectives add dayCounter dummy "Dias"',
             "scoreboard players add DAY_COUNTER dayCounter 0",
-            "execute if score DAY_COUNTER dayCounter matches ..0 run scoreboard players set DAY_COUNTER dayCounter 1",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add DAY_COUNTER dayCounter 1",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
@@ -1413,15 +1426,14 @@ class MapConverterApp:
             "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
             "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
             "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
-            "scoreboard objectives add DAY_COUNTER dummy",
-            "scoreboard objectives add dayCounter dummy",
+            'scoreboard objectives add dayCounter dummy "Dias"',
             "scoreboard objectives add day_timer dummy",
             "scoreboard objectives add is_night dummy",
             "scoreboard objectives add cycle_ran dummy",
             "scoreboard objectives add world_init dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
             "scoreboard players add #world dayCounter 0",
-            "execute if score DAY_COUNTER dayCounter matches ..0 run scoreboard players set DAY_COUNTER dayCounter 1",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @a dayCounter 0",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
@@ -1447,12 +1459,12 @@ class MapConverterApp:
         player_join_lines = [
             f"# {self.world_name} Player Join Handler",
             "tag @s add joined",
-            "scoreboard objectives add dayCounter dummy",
-            "scoreboard objectives add DAY_COUNTER dummy",
+            'scoreboard objectives add dayCounter dummy "Dias"',
             "scoreboard objectives add world_init dummy",
             "scoreboard players add #world world_init 0",
+            "execute unless score #world world_init matches 0.. run scoreboard players set #world world_init 0",
             "scoreboard players add DAY_COUNTER dayCounter 0",
-            "execute if score DAY_COUNTER dayCounter matches ..0 run scoreboard players set DAY_COUNTER dayCounter 1",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @s dayCounter 0",
             "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute if score #world world_init matches 0 run function {self.safe_name}/init_world",
@@ -1469,19 +1481,19 @@ class MapConverterApp:
             f"# 1. Ticking areas permanentes",
             f"scoreboard objectives add areas_added dummy",
             f"scoreboard players add #world areas_added 0",
-            f"execute if score #world areas_added matches 0 run tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
-            f"execute if score #world areas_added matches 0 run tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
+            f"execute unless score #world areas_added matches 1 run tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
+            f"execute unless score #world areas_added matches 1 run tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
             f"scoreboard players set #world areas_added 1",
             f"# 2. Inicializacao automatica do mundo e do contador ao entrar o primeiro jogador",
             f"scoreboard objectives add world_init dummy",
+            f'scoreboard objectives add dayCounter dummy "Dias"',
             f"scoreboard players add #world world_init 0",
+            f"execute unless score #world world_init matches 0.. run scoreboard players set #world world_init 0",
             f"execute if entity @a if score #world world_init matches 0 run function {self.safe_name}/init_world",
             f"execute if entity @a if score #world world_init matches 0 run function init_world",
             f"# 3. Sincronizacao continua do contador de dias e garantia de DAY_COUNTER >= 1",
-            "scoreboard objectives add dayCounter dummy",
-            "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard players add DAY_COUNTER dayCounter 0",
-            "execute if score DAY_COUNTER dayCounter matches ..0 run scoreboard players set DAY_COUNTER dayCounter 1",
+            "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @a dayCounter 0",
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",

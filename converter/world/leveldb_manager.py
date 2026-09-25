@@ -188,7 +188,7 @@ class BedrockLevelDBManager:
         return bytes(out)
 
     @classmethod
-    def update_command_blocks(cls, db_dir: str, convert_func: Callable[[str], str]) -> int:
+    def update_command_blocks(cls, db_dir: str, convert_func: Callable[[str], str], safe_name: str = "") -> int:
         """Percorre todos os arquivos .ldb do banco LevelDB e atualiza blocos de comando in-place."""
         """Atualiza blocos de comando no banco LevelDB Bedrock de forma atômica e segura."""
         if not os.path.exists(db_dir):
@@ -211,7 +211,15 @@ class BedrockLevelDBManager:
                                 tags.append(tag)
                                 if tag.get("id") == "CommandBlock" and "Command" in tag:
                                     orig_cmd = str(tag["Command"])
-                                    new_cmd = convert_func(orig_cmd)
+                                    x = int(tag.get("x", 0))
+                                    y = int(tag.get("y", 0))
+                                    z = int(tag.get("z", 0))
+                                    if safe_name and (x, y, z) in [(271, 1, -2201), (306, 2, -2102)]:
+                                        new_cmd = f"function {safe_name}/cycle_night"
+                                    elif safe_name and (x, y, z) in [(377, 6, -2117), (273, 1, -2200)]:
+                                        new_cmd = f"function {safe_name}/init_world"
+                                    else:
+                                        new_cmd = convert_func(orig_cmd)
                                     if new_cmd != orig_cmd:
                                         tag["Command"] = nbtlib.String(new_cmd)
                                         val_modified = True
@@ -260,7 +268,15 @@ class BedrockLevelDBManager:
                                     tags.append(tag)
                                     if tag.get("id") == "CommandBlock" and "Command" in tag:
                                         orig_cmd = str(tag["Command"])
-                                        new_cmd = convert_func(orig_cmd)
+                                        x = int(tag.get("x", 0))
+                                        y = int(tag.get("y", 0))
+                                        z = int(tag.get("z", 0))
+                                        if safe_name and (x, y, z) in [(271, 1, -2201), (306, 2, -2102)]:
+                                            new_cmd = f"function {safe_name}/cycle_night"
+                                        elif safe_name and (x, y, z) in [(377, 6, -2117), (273, 1, -2200)]:
+                                            new_cmd = f"function {safe_name}/init_world"
+                                        else:
+                                            new_cmd = convert_func(orig_cmd)
                                         if new_cmd != orig_cmd:
                                             tag["Command"] = nbtlib.String(new_cmd)
                                             val_modified = True

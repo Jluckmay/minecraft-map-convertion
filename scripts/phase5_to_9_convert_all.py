@@ -96,7 +96,8 @@ def main():
     known_npcs_set = set(bp_meta["known_npcs"])
     modified_cbs = BedrockLevelDBManager.update_command_blocks(
         db_dir,
-        lambda cmd: CommandTranslator.translate(cmd, known_npcs_set, safe_name)
+        lambda cmd: CommandTranslator.translate(cmd, known_npcs_set, safe_name),
+        safe_name=safe_name
     )
     print(f"    [OK] Total de blocos de comando convertidos e atualizados no LevelDB: {modified_cbs}")
 
