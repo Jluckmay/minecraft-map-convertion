@@ -113,6 +113,13 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("entity.illusioner.prepare_blind", defs)
             self.assertIn("entity.ghast.scream", defs)
             self.assertIn("entity.wither_skeleton.death", defs)
+
+            # Render controllers para NPCs
+            rc_file = os.path.join(target_rp, "render_controllers", "npc_villager.render_controllers.json")
+            self.assertTrue(os.path.exists(rc_file))
+            with open(rc_file, "r", encoding="utf-8") as f:
+                rc_data = json.load(f)
+            self.assertIn("controller.render.villager_v2", rc_data.get("render_controllers", {}))
         finally:
             shutil.rmtree(tmp_dir)
 

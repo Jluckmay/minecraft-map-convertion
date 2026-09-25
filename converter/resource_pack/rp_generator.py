@@ -266,17 +266,67 @@ class ResourcePackGenerator:
                 if ef.endswith(".json"):
                     src_f = os.path.join(packs_rp_ent, ef)
                     dst_f = os.path.join(target_ent_dir, ef)
-                    shutil.copyfile(src_f, dst_f)
+                    try:
+                        with open(src_f, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                        desc = data.get("minecraft:client_entity", {}).get("description", {})
+                        if desc:
+                            if "materials" in desc:
+                                desc["materials"]["default"] = "entity_alphatest"
+                            if "animations" not in desc:
+                                desc["animations"] = {
+                                    "general": "animation.villager.general",
+                                    "look_at_target": "animation.common.look_at_target",
+                                    "move": "animation.villager.move",
+                                    "raise_arms": "animation.villager.raise_arms"
+                                }
+                            if "animation_controllers" not in desc:
+                                desc["animation_controllers"] = [
+                                    {"general": "controller.animation.villager_v2.general"},
+                                    {"move": "controller.animation.villager_v2.move"},
+                                    {"raise_arms": "controller.animation.villager_v2.raise_arms"}
+                                ]
+                        with open(dst_f, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=2)
+                    except Exception:
+                        shutil.copyfile(src_f, dst_f)
+
                     # Cria aliases úteis para caracteres especiais como ø/o
                     if ef == "npc_j_rn.entity.json":
                         try:
                             with open(src_f, "r", encoding="utf-8") as f:
                                 data = json.load(f)
-                            data["minecraft:client_entity"]["description"]["identifier"] = f"{safe_name}:npc_jorn"
+                            desc = data.get("minecraft:client_entity", {}).get("description", {})
+                            if desc:
+                                desc["identifier"] = f"{safe_name}:npc_jorn"
+                                if "materials" in desc:
+                                    desc["materials"]["default"] = "entity_alphatest"
                             with open(os.path.join(target_ent_dir, "npc_jorn.entity.json"), "w", encoding="utf-8") as f:
                                 json.dump(data, f, indent=2)
                         except Exception:
                             pass
+
+        # 7. Render Controllers para NPCs Villagers (evita que fiquem invisíveis no Bedrock)
+        rc_dir = os.path.join(target_rp_dir, "render_controllers")
+        os.makedirs(rc_dir, exist_ok=True)
+        rc_data = {
+            "format_version": "1.8.0",
+            "render_controllers": {
+                "controller.render.villager_v2": {
+                    "geometry": "Geometry.default",
+                    "materials": [
+                        {"*": "Material.default"}
+                    ],
+                    "textures": [
+                        "Texture.default",
+                        "Texture.biome",
+                        "Texture.profession"
+                    ]
+                }
+            }
+        }
+        with open(os.path.join(rc_dir, "npc_villager.render_controllers.json"), "w", encoding="utf-8") as f:
+            json.dump(rc_data, f, indent=2)
 
         return {
             "header_uuid": rp_header_uuid,

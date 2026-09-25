@@ -1356,14 +1356,27 @@ class MapConverterApp:
             "minecraft:client_entity": {
                 "description": {
                     "identifier": ent_id,
-                    "materials": {"default": "villager"},
+                    "materials": {"default": "entity_alphatest"},
                     "textures": {
                         "default": "textures/entity/villager2/villager",
                         "profession": f"textures/entity/villager2/professions/{profession}",
                         "biome": f"textures/entity/villager2/biomes/biome_{biome}"
                     },
                     "geometry": {"default": "geometry.villager_v2"},
-                    "scripts": {"pre_animation": ["variable.profession_index = 1;"]},
+                    "scripts": {
+                        "pre_animation": ["variable.profession_index = 1;"]
+                    },
+                    "animations": {
+                        "general": "animation.villager.general",
+                        "look_at_target": "animation.common.look_at_target",
+                        "move": "animation.villager.move",
+                        "raise_arms": "animation.villager.raise_arms"
+                    },
+                    "animation_controllers": [
+                        {"general": "controller.animation.villager_v2.general"},
+                        {"move": "controller.animation.villager_v2.move"},
+                        {"raise_arms": "controller.animation.villager_v2.raise_arms"}
+                    ],
                     "render_controllers": ["controller.render.villager_v2"],
                     "spawn_egg": {"texture": "spawn_egg", "texture_index": 15}
                 }
@@ -1371,6 +1384,30 @@ class MapConverterApp:
         }
         with open(os.path.join(rp_entity_dir, f"npc_{key}.entity.json"), "w", encoding="utf-8") as f:
             json.dump(ent_rp, f, indent=2)
+
+        # 4. RP Render Controller
+        rc_dir = os.path.join(self.rp_dir, "render_controllers")
+        os.makedirs(rc_dir, exist_ok=True)
+        rc_file = os.path.join(rc_dir, "npc_villager.render_controllers.json")
+        if not os.path.exists(rc_file):
+            rc_data = {
+                "format_version": "1.8.0",
+                "render_controllers": {
+                    "controller.render.villager_v2": {
+                        "geometry": "Geometry.default",
+                        "materials": [
+                            {"*": "Material.default"}
+                        ],
+                        "textures": [
+                            "Texture.default",
+                            "Texture.biome",
+                            "Texture.profession"
+                        ]
+                    }
+                }
+            }
+            with open(rc_file, "w", encoding="utf-8") as f:
+                json.dump(rc_data, f, indent=2)
 
     def _generate_utility_functions(self):
         func_dir = os.path.join(self.bp_dir, "functions", self.safe_name)
