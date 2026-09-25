@@ -152,6 +152,13 @@ class TestMechanicsFixes(unittest.TestCase):
         self.assertEqual(score_elem["score"]["name"], "DAY_COUNTER")
         self.assertEqual(score_elem["score"]["objective"], "dayCounter")
 
+    def test_day_counter_reset_translation(self):
+        """Testa se comandos de reset do fakeplayer DAY_COUNTER são traduzidos para set 1."""
+        cmd1 = "/scoreboard players reset DAY_COUNTER dayCounter"
+        cmd2 = "scoreboard players reset DAY_COUNTER"
+        self.assertEqual(CommandTranslator.translate(cmd1), "scoreboard players set DAY_COUNTER dayCounter 1")
+        self.assertEqual(CommandTranslator.translate(cmd2), "scoreboard players set DAY_COUNTER dayCounter 1")
+
     def test_day_cycle_functions_generation(self):
         """Testa se cycle_morning.mcfunction e cycle_night.mcfunction são geradas com os comandos corretos."""
         tmp_dir = tempfile.mkdtemp()

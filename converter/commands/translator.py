@@ -331,6 +331,10 @@ class CommandTranslator:
                 rule, val = parts[1].lower(), parts[2].lower()
                 return f"gamerule {rule} {val}"
 
+        # 14. Scoreboard reset DAY_COUNTER -> set DAY_COUNTER dayCounter 1 (Bedrock fakeplayer safety)
+        if re.search(r'\bscoreboard\s+players\s+reset\s+DAY_COUNTER\b', s):
+            return "scoreboard players set DAY_COUNTER dayCounter 1"
+
         # Limpeza geral de namespace minecraft: em comandos padrão
         s = re.sub(r'\bminecraft:', '', s)
         return s
