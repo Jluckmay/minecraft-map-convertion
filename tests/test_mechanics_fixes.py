@@ -540,18 +540,19 @@ class TestMechanicsFixes(unittest.TestCase):
             with open(out_func, "r", encoding="utf-8") as f:
                 lines = [l.strip() for l in f.readlines() if l.strip()]
 
-            # Deve haver 3 linhas: fog push, tag add, e in the_end run tp
-            self.assertEqual(len(lines), 3)
-            self.assertIn("fog @s push mazescapist:nether_fog nether_fog", lines[0])
-            self.assertIn("tag @s add in_nether_sector", lines[1])
-            self.assertIn("in the_end run tp @s -37 138 -202", lines[2])
+            # Deve haver 4 linhas: vanilla fog push, custom fog push, tag add, e in the_end run tp
+            self.assertEqual(len(lines), 4)
+            self.assertIn("fog @s push minecraft:fog_basalt_deltas nether_fog_vanilla", lines[0])
+            self.assertIn("fog @s push mazescapist:nether_fog nether_fog", lines[1])
+            self.assertIn("tag @s add in_nether_sector", lines[2])
+            self.assertIn("in the_end run tp @s -37 138 -202", lines[3])
 
             # Verifica tick.mcfunction para gerenciamento de névoa e tags
             tick_func = os.path.join(bp_dest, "functions", "tick.mcfunction")
             with open(tick_func, "r", encoding="utf-8") as f:
                 tick_txt = f.read()
-            self.assertIn("execute in the_end as @a[tag=!in_nether_sector] run fog @s push mazescapist:nether_fog nether_fog", tick_txt)
-            self.assertIn("execute in overworld as @a[tag=in_nether_sector] run fog @s remove nether_fog", tick_txt)
+            self.assertIn("execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run fog @s push mazescapist:nether_fog nether_fog", tick_txt)
+            self.assertIn("execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run fog @s remove nether_fog", tick_txt)
         finally:
             shutil.rmtree(tmp_dir)
 

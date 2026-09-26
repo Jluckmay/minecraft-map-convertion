@@ -1334,8 +1334,15 @@ class MapConverterApp:
                     conv_lines = []
                     for l in raw_lines:
                         if "teleport_to_area_1" in fn:
-                            for coord in ("214 42 -2214", "218 42 -2214", "216 42 -2206", "218 42 -2206"):
+                            sector_fogs = {
+                                "214 42 -2214": "minecraft:fog_basalt_deltas",
+                                "218 42 -2214": "minecraft:fog_hell",
+                                "216 42 -2206": "minecraft:fog_warped_forest",
+                                "218 42 -2206": "minecraft:fog_crimson_forest",
+                            }
+                            for coord, v_fog in sector_fogs.items():
                                 if coord in l:
+                                    conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog_vanilla")
                                     conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {self.safe_name}:nether_fog nether_fog")
                                     conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add in_nether_sector")
                                     break
@@ -1942,8 +1949,9 @@ class MapConverterApp:
             "setblock 287 100 -2168 daylight_detector_inverted",
             "setblock 286 1 -2168 redstone_block",
             "scoreboard players set #world world_init 1",
-            "execute in overworld run fog @a remove nether_fog",
-            "tag @a remove in_nether_sector",
+            "execute as @a at @s in overworld if entity @s[r=0] run fog @s remove nether_fog",
+            "execute as @a at @s in overworld if entity @s[r=0] run fog @s remove nether_fog_vanilla",
+            "execute as @a at @s in overworld if entity @s[r=0] run tag @s remove in_nether_sector",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
         init_content = "\n".join(init_lines) + "\n"
@@ -1963,8 +1971,9 @@ class MapConverterApp:
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @s dayCounter 0",
             "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            "execute in overworld run fog @s remove nether_fog",
-            "tag @s remove in_nether_sector",
+            "execute as @s at @s in overworld if entity @s[r=0] run fog @s remove nether_fog",
+            "execute as @s at @s in overworld if entity @s[r=0] run fog @s remove nether_fog_vanilla",
+            "execute as @s at @s in overworld if entity @s[r=0] run tag @s remove in_nether_sector",
             f"execute if score #world world_init matches 0 run function {self.safe_name}/init_world",
             f'tellraw @s {{"rawtext":[{{"text":"§a[{self.world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
         ]
@@ -2003,11 +2012,14 @@ class MapConverterApp:
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {self.safe_name}/player_join",
             f"# 4. Gerenciamento dinamico de nevoa customizada do Nether no The End",
-            f"execute in the_end as @a[tag=!in_nether_sector] run fog @s push {self.safe_name}:nether_fog nether_fog",
-            f"execute in the_end as @a[tag=!in_nether_sector] run tag @s add in_nether_sector",
-            f"execute in overworld as @a[tag=in_nether_sector] run fog @s remove nether_fog",
-            f"execute in overworld as @a[tag=in_nether_sector] run tag @s remove in_nether_sector",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run fog @s push minecraft:fog_crimson_forest nether_fog_vanilla",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run fog @s push {self.safe_name}:nether_fog nether_fog",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run tag @s add in_nether_sector",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run fog @s remove nether_fog",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run fog @s remove nether_fog_vanilla",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run tag @s remove in_nether_sector",
             "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog",
+            "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog_vanilla",
             f"# 5. Manutencao dos detectores de ciclo dia/noite",
             "execute if score #world world_init matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute if score #world world_init matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
