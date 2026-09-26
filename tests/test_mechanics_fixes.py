@@ -284,6 +284,47 @@ class TestMechanicsFixes(unittest.TestCase):
 
             self.assertLessEqual(ta_count, 10, "Bedrock permite no máximo 10 ticking areas.")
             self.assertLessEqual(total_chunks, 100, f"Total de chunks ({total_chunks}) deve ser <= 100.")
+            self.assertEqual(ta_count, 3, "Devem existir exatamente 3 ticking areas: glade, templates e station.")
+            self.assertEqual(total_chunks, 98, "Total de chunks deve ser exatamente 98 (64 + 30 + 4).")
+        finally:
+            shutil.rmtree(tmp_dir)
+
+    def test_train_station_ticking_area(self):
+        """Testa se a ticking area da estação de trem cobre todos os blocos de comando e receptores dos 8 geradores."""
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            target_bp = os.path.join(tmp_dir, "target_bp")
+            BehaviorPackGenerator.generate("", target_bp, "MazeRunner", "mazerunner", "dummy-rp-uuid")
+
+            init_func = os.path.join(target_bp, "functions", "mazerunner", "init_world.mcfunction")
+            with open(init_func, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            station_box = None
+            for line in lines:
+                if "maze_station" in line and line.strip().startswith("tickingarea add"):
+                    parts = line.strip().split()
+                    station_box = (
+                        min(int(parts[2]), int(parts[5])),
+                        max(int(parts[2]), int(parts[5])),
+                        min(int(parts[4]), int(parts[7])),
+                        max(int(parts[4]), int(parts[7])),
+                    )
+                    break
+
+            self.assertIsNotNone(station_box, "A ticking area maze_station deve estar declarada no init_world.")
+            min_x, max_x, min_z, max_z = station_box
+
+            # Todos os 8 alvos de /setblock dos geradores na estação
+            targets = [
+                (213, -2212), (214, -2212), (216, -2212), (217, -2212),
+                (213, -2208), (214, -2208), (216, -2208), (217, -2208)
+            ]
+            for tx, tz in targets:
+                self.assertTrue(
+                    min_x <= tx <= max_x and min_z <= tz <= max_z,
+                    f"Alvo da estação ({tx}, {tz}) deve estar contido em maze_station [{min_x}..{max_x}, {min_z}..{max_z}]"
+                )
         finally:
             shutil.rmtree(tmp_dir)
 

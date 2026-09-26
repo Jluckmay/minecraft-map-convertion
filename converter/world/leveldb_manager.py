@@ -314,3 +314,61 @@ class BedrockLevelDBManager:
 
         return total_modified
 
+    @classmethod
+    def inject_ticking_areas(cls, db_dir: str) -> int:
+        """Injeta ticking areas permanentes estrategicas diretamente no banco LevelDB Bedrock."""
+        if not os.path.exists(db_dir):
+            return 0
+
+        areas = [
+            {
+                "uuid": "00000000-0000-0000-0000-000000000001",
+                "name": "maze_glade_center",
+                "min_x": 160,
+                "max_x": 287,
+                "min_z": -2208,
+                "max_z": -2081,
+            },
+            {
+                "uuid": "00000000-0000-0000-0000-000000000002",
+                "name": "maze_templates_clock",
+                "min_x": 272,
+                "max_x": 319,
+                "min_z": -2208,
+                "max_z": -2049,
+            },
+            {
+                "uuid": "00000000-0000-0000-0000-000000000003",
+                "name": "maze_station",
+                "min_x": 208,
+                "max_x": 239,
+                "min_z": -2224,
+                "max_z": -2208,
+            },
+        ]
+
+        try:
+            import leveldb
+            db = leveldb.LevelDB(db_dir)
+            injected = 0
+            for a in areas:
+                key = f"tickingarea_{a['uuid']}".encode("ascii")
+                tag = nbtlib.Compound({
+                    "Dimension": nbtlib.Int(0),
+                    "Name": nbtlib.String(a["name"]),
+                    "IsCircle": nbtlib.Byte(0),
+                    "MinX": nbtlib.Int(a["min_x"]),
+                    "MaxX": nbtlib.Int(a["max_x"]),
+                    "MinZ": nbtlib.Int(a["min_z"]),
+                    "MaxZ": nbtlib.Int(a["max_z"]),
+                    "Preload": nbtlib.Byte(1),
+                })
+                buf = io.BytesIO()
+                nbtlib.File(tag).write(buf, byteorder="little")
+                db.put(key, buf.getvalue())
+                injected += 1
+            db.close()
+            return injected
+        except Exception:
+            return 0
+

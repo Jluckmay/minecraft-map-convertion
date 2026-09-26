@@ -891,6 +891,64 @@ class BedrockLevelDBManager:
 
         return total_modified
 
+    @classmethod
+    def inject_ticking_areas(cls, db_dir: str) -> int:
+        """Injeta ticking areas permanentes estrategicas diretamente no banco LevelDB Bedrock."""
+        if not os.path.exists(db_dir):
+            return 0
+
+        areas = [
+            {
+                "uuid": "00000000-0000-0000-0000-000000000001",
+                "name": "maze_glade_center",
+                "min_x": 160,
+                "max_x": 287,
+                "min_z": -2208,
+                "max_z": -2081,
+            },
+            {
+                "uuid": "00000000-0000-0000-0000-000000000002",
+                "name": "maze_templates_clock",
+                "min_x": 272,
+                "max_x": 319,
+                "min_z": -2208,
+                "max_z": -2049,
+            },
+            {
+                "uuid": "00000000-0000-0000-0000-000000000003",
+                "name": "maze_station",
+                "min_x": 208,
+                "max_x": 239,
+                "min_z": -2224,
+                "max_z": -2208,
+            },
+        ]
+
+        try:
+            import leveldb
+            db = leveldb.LevelDB(db_dir)
+            injected = 0
+            for a in areas:
+                key = f"tickingarea_{a['uuid']}".encode("ascii")
+                tag = nbtlib.Compound({
+                    "Dimension": nbtlib.Int(0),
+                    "Name": nbtlib.String(a["name"]),
+                    "IsCircle": nbtlib.Byte(0),
+                    "MinX": nbtlib.Int(a["min_x"]),
+                    "MaxX": nbtlib.Int(a["max_x"]),
+                    "MinZ": nbtlib.Int(a["min_z"]),
+                    "MaxZ": nbtlib.Int(a["max_z"]),
+                    "Preload": nbtlib.Byte(1),
+                })
+                buf = io.BytesIO()
+                nbtlib.File(tag).write(buf, byteorder="little")
+                db.put(key, buf.getvalue())
+                injected += 1
+            db.close()
+            return injected
+        except Exception:
+            return 0
+
 
 class MapConverterApp:
 
@@ -968,6 +1026,11 @@ class MapConverterApp:
             safe_name=self.safe_name
         )
         print(f"    [OK] Total de blocos de comando convertidos no mundo: {conv_cbs}")
+
+        # Injeção de ticking areas estratégicas permanentes no LevelDB
+        injected_ta = BedrockLevelDBManager.inject_ticking_areas(db_path)
+        if injected_ta > 0:
+            print(f"    [OK] Ticking areas estratégicas injetadas diretamente no LevelDB: {injected_ta}")
 
         # Sincronização de inventário do jogador e auditoria de contêineres/baús
         try:
@@ -1662,9 +1725,10 @@ class MapConverterApp:
             "gamerule doimmediaterespawn true",
             "gamerule domobspawning false",
             "gamerule dodaylightcycle true",
-            "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates e relogio (76 chunks)",
+            "# Ticking areas permanentes cobrindo centro, portoes, clareira, templates, relogio e estacao de trem (98 chunks)",
             "tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
             "tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
+            "tickingarea add 208 40 -2218 224 60 -2206 maze_station",
             'scoreboard objectives add dayCounter dummy "Dias"',
             "scoreboard objectives add DAY_COUNTER dummy",
             "scoreboard objectives add day_timer dummy",
@@ -1718,12 +1782,18 @@ class MapConverterApp:
 
         # 4. Tick hook com máquina de estados Daylight Detector + sincronização
         tick_lines = [
-            f"# 1. Ticking areas permanentes",
+            f"# 1. Ticking areas permanentes (98 chunks no total, limite Bedrock 100 chunks)",
             f"scoreboard objectives add areas_added dummy",
             f"scoreboard players add #world areas_added 0",
             f"execute if score #world areas_added matches 0 run tickingarea add 170 50 -2205 275 110 -2095 maze_glade_center",
             f"execute if score #world areas_added matches 0 run tickingarea add 276 0 -2205 310 50 -2060 maze_templates_clock",
+            f"execute if score #world areas_added matches 0 run tickingarea add 208 40 -2218 224 60 -2206 maze_station",
             f"scoreboard players set #world areas_added 1",
+            f"# Garantia retroativa da estacao de trem para saves existentes",
+            f"scoreboard objectives add station_ticked dummy",
+            f"scoreboard players add #world station_ticked 0",
+            f"execute if score #world station_ticked matches 0 run tickingarea add 208 40 -2218 224 60 -2206 maze_station",
+            f"scoreboard players set #world station_ticked 1",
             f"# 2. Inicializacao automatica do mundo e do contador ao entrar o primeiro jogador",
             f"scoreboard objectives add world_init dummy",
             f"scoreboard players add #world world_init 0",

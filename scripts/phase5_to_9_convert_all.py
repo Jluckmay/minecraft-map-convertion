@@ -101,6 +101,11 @@ def main():
     )
     print(f"    [OK] Total de blocos de comando convertidos e atualizados no LevelDB: {modified_cbs}")
 
+    # Injeção in-place de ticking areas estratégicas no LevelDB
+    print("    -> Injetando ticking areas estratégicas permanentes no LevelDB...")
+    injected_ta = BedrockLevelDBManager.inject_ticking_areas(db_dir)
+    print(f"    [OK] Ticking areas estratégicas injetadas diretamente no LevelDB: {injected_ta}")
+
     # Sincronização de inventário do jogador e auditoria de contêineres/baús
     print("    -> Sincronizando inventário do jogador e auditando contêineres/baús...")
     injected_items = PlayerInventoryManager.sync_player_inventory(extracted_world, db_dir)
