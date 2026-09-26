@@ -450,6 +450,12 @@ class BehaviorPackGenerator:
                                     trans = re.sub(r'matches\s+55\b', f'matches 55.. unless entity @e[type={safe_name}:npc_jorn]', trans)
                             converted_lines.append(trans)
 
+                    if "teleport_to_area_1" in fname:
+                        converted_lines.append("execute if block 214 42 -2214 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+                        converted_lines.append("execute if block 218 42 -2214 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+                        converted_lines.append("execute if block 216 42 -2206 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+                        converted_lines.append("execute if block 218 42 -2206 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+
                     if "a_tp_spawn" in fname:
                         converted_lines.insert(0, f"execute if score #world world_init matches 0 run function {safe_name}/init_world")
 
@@ -813,6 +819,7 @@ class BehaviorPackGenerator:
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {safe_name}/player_join",
+            "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog",
             f"# 4. Manutencao dos detectores de ciclo dia/noite",
             "execute if score #world world_init matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute if score #world world_init matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",

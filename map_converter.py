@@ -267,7 +267,7 @@ class DatapackConverter:
             exec_prefix = re.sub(r'distance=\.\.([0-9.]+)', r'r=\1', exec_prefix)
             exec_prefix = re.sub(r'distance=([0-9.]+)\.\.([0-9.]+)', r'rm=\1,r=\2', exec_prefix)
             exec_prefix = re.sub(r'distance=([0-9.]+)', r'r=\1', exec_prefix)
-            exec_prefix = exec_prefix.replace("in minecraft:overworld", "in overworld").replace("in minecraft:the_nether", "in nether").replace("in minecraft:the_end", "in the_end")
+            exec_prefix = exec_prefix.replace("in minecraft:overworld", "in overworld").replace("in minecraft:the_nether", "in the_end").replace("in the_nether", "in the_end").replace("in nether", "in the_end").replace("in minecraft:the_end", "in the_end")
             exec_prefix = re.sub(r'\bfunction ([a-zA-Z0-9_]+):([a-zA-Z0-9_/-]+)', r'function \1/\2', exec_prefix)
             trans_inner = cls.convert_command(run_cmd, known_npcs, world_safe_name)
             return f"{exec_prefix} run {trans_inner}"
@@ -304,7 +304,9 @@ class DatapackConverter:
 
         # 5. Sintaxe de dimensões e execute: in minecraft:overworld -> in overworld
         s = s.replace("in minecraft:overworld", "in overworld")
-        s = s.replace("in minecraft:the_nether", "in nether")
+        s = s.replace("in minecraft:the_nether", "in the_end")
+        s = s.replace("in the_nether", "in the_end")
+        s = s.replace("in nether", "in the_end")
         s = s.replace("in minecraft:the_end", "in the_end")
 
         # 6. tp sem alvo dentro de execute: run tp <x> <y> <z> -> run tp @s <x> <y> <z>
@@ -1029,6 +1031,15 @@ class MapConverterApp:
         )
         print(f"    [OK] Total de blocos de comando convertidos no mundo: {conv_cbs}")
 
+        # Remapeamento estrutural do Nether para The End (limite de 256 blocos do End vs 128 do Nether)
+        try:
+            from converter.world.dimension_remapper import DimensionRemapper
+            remap_res = DimensionRemapper.remap_nether_to_end(db_path)
+            if remap_res.get("remapped_keys", 0) > 0:
+                print(f"    [OK] Remapeamento Nether -> The End: {remap_res['remapped_keys']} chaves e estruturas migradas, {remap_res['updated_command_blocks']} blocos de comando atualizados.")
+        except Exception as e:
+            print(f"    [!] Aviso no remapeamento Nether -> The End: {e}")
+
         # Injeção de ticking areas estratégicas permanentes no LevelDB
         injected_ta = BedrockLevelDBManager.inject_ticking_areas(db_path)
         if injected_ta > 0:
@@ -1321,6 +1332,11 @@ class MapConverterApp:
                                     self._create_npc_files(slug, disp_n, prof_n, biome_n, trades)
 
                     conv_lines = [DatapackConverter.convert_command(l, self.known_npcs, self.safe_name) for l in raw_lines]
+                    if "teleport_to_area_1" in fn:
+                        conv_lines.append("execute if block 214 42 -2214 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+                        conv_lines.append("execute if block 218 42 -2214 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+                        conv_lines.append("execute if block 216 42 -2206 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+                        conv_lines.append("execute if block 218 42 -2206 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
                     if "a_tp_spawn" in fn:
                         conv_lines.insert(0, f"execute if score #world world_init matches 0 run function {self.safe_name}/init_world")
                     with open(dest_path, "w", encoding="utf-8") as f:
@@ -1810,6 +1826,7 @@ class MapConverterApp:
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {self.safe_name}/player_join",
+            "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog",
             f"# 4. Manutencao dos detectores de ciclo dia/noite",
             "execute if score #world world_init matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute if score #world world_init matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",

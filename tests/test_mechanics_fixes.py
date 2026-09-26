@@ -24,6 +24,8 @@ from converter.commands.translator import CommandTranslator
 from converter.behavior_pack.bp_generator import BehaviorPackGenerator
 from converter.resource_pack.rp_generator import ResourcePackGenerator
 from converter.world.leveldb_manager import BedrockLevelDBManager
+from converter.world.dimension_remapper import DimensionRemapper
+from map_converter import DatapackConverter
 
 
 class TestMechanicsFixes(unittest.TestCase):
@@ -392,6 +394,83 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertEqual(results[(377, 6, -2117)], "scoreboard players set DAY_COUNTER dayCounter 1")
             self.assertNotIn("init_world", results[(377, 6, -2117)])
             self.assertEqual(results[(273, 1, -2200)], "scoreboard players set DAY_COUNTER dayCounter 1")
+        finally:
+            shutil.rmtree(tmp_dir)
+
+    def test_nether_execute_routing(self):
+        """Testa se comandos com in minecraft:the_nether / in the_nether / in nether são roteados para in the_end."""
+        cmd1 = "execute in minecraft:the_nether run tp @s 499 126 -154"
+        trans1 = CommandTranslator.translate(cmd1, set(), "mazerunner")
+        self.assertIn("in the_end", trans1)
+        self.assertNotIn("the_nether", trans1)
+        self.assertNotIn("in nether", trans1)
+
+        cmd2 = "execute in nether positioned as @e[tag=Fantasy] run effect @a[r=1] levitation 2 2 true"
+        trans2 = CommandTranslator.translate(cmd2, set(), "mazerunner")
+        self.assertIn("in the_end", trans2)
+        self.assertNotIn("in nether", trans2)
+
+        cmd3 = "execute in the_nether positioned as @a[x=-7,y=79,z=-670,dx=547,dy=140,dz=355] run effect @p night_vision 11 0 true"
+        trans3 = DatapackConverter.convert_command(cmd3, set(), "mazerunner")
+        self.assertIn("in the_end", trans3)
+        self.assertNotIn("the_nether", trans3)
+
+    def test_dimension_remapper(self):
+        """Testa o remapeamento de chaves da dimensão 1 (Nether) para dimensão 2 (The End) e atualização de blocos de comando."""
+        import struct
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            db_dir = os.path.join(tmp_dir, "db")
+            os.makedirs(db_dir)
+
+            import leveldb
+            db = leveldb.LevelDB(db_dir, create_if_missing=True)
+
+            # Chave da dimensão 1 (Nether)
+            k_nether = struct.pack('<ii', 10, 20) + struct.pack('<i', 1) + b'/0'
+            v_nether = b"subchunk_nether_data"
+            db.put(k_nether, v_nether)
+
+            # Chave de Overworld (sem dimensão, len 10)
+            k_overworld = struct.pack('<ii', 10, 20) + b'/0'
+            v_overworld = b"subchunk_overworld_data"
+            db.put(k_overworld, v_overworld)
+
+            # Bloco de comando apontando para the_nether
+            cb_tag = nbtlib.Compound({
+                "id": nbtlib.String("CommandBlock"),
+                "x": nbtlib.Int(319),
+                "y": nbtlib.Int(1),
+                "z": nbtlib.Int(-2160),
+                "Command": nbtlib.String("execute in the_nether positioned as @a run effect @p night_vision 11 0 true"),
+                "CustomName": nbtlib.String("@"),
+                "auto": nbtlib.Byte(0)
+            })
+            buf = io.BytesIO()
+            nbtlib.File(cb_tag).write(buf, byteorder="little")
+            k_cb = struct.pack('<ii', 19, -135) + b'1'
+            db.put(k_cb, buf.getvalue())
+            db.close()
+
+            res = DimensionRemapper.remap_nether_to_end(db_dir)
+            self.assertEqual(res["remapped_keys"], 1)
+            self.assertEqual(res["updated_command_blocks"], 1)
+
+            # Reabre para verificar estado
+            db = leveldb.LevelDB(db_dir)
+            k_end_expected = struct.pack('<ii', 10, 20) + struct.pack('<i', 2) + b'/0'
+            self.assertEqual(db.get(k_end_expected), v_nether)
+            with self.assertRaises(KeyError):
+                db.get(k_nether)
+
+            self.assertEqual(db.get(k_overworld), v_overworld)
+
+            # Verifica se o bloco de comando foi atualizado para in the_end
+            cb_val = db.get(k_cb)
+            tag = nbtlib.File.from_fileobj(io.BytesIO(cb_val), byteorder="little")
+            self.assertIn("in the_end", str(tag["Command"]))
+            self.assertNotIn("the_nether", str(tag["Command"]))
+            db.close()
         finally:
             shutil.rmtree(tmp_dir)
 

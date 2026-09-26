@@ -173,9 +173,11 @@ class CommandTranslator:
         if s.startswith("execute ") and " run " in s:
             exec_prefix, run_cmd = s.split(" run ", 1)
             exec_prefix = cls.translate_selector(exec_prefix)
-            # Normalização de dimensões no execute in
+            # Normalização de dimensões no execute in (Nether roteado para The End devido ao limite de altura de 256 blocos)
             exec_prefix = re.sub(r'\bminecraft:overworld\b', 'overworld', exec_prefix)
-            exec_prefix = re.sub(r'\bminecraft:the_nether\b', 'nether', exec_prefix)
+            exec_prefix = re.sub(r'\bminecraft:the_nether\b', 'the_end', exec_prefix)
+            exec_prefix = re.sub(r'\bthe_nether\b', 'the_end', exec_prefix)
+            exec_prefix = re.sub(r'\bnether\b', 'the_end', exec_prefix)
             exec_prefix = re.sub(r'\bminecraft:the_end\b', 'the_end', exec_prefix)
             # Normalização de namespace em chamadas de função
             exec_prefix = re.sub(r'\bfunction\s+([a-zA-Z0-9._-]+):([a-zA-Z0-9._/-]+)', r'function \1/\2', exec_prefix)

@@ -101,6 +101,12 @@ def main():
     )
     print(f"    [OK] Total de blocos de comando convertidos e atualizados no LevelDB: {modified_cbs}")
 
+    # Remapeamento estrutural do Nether para The End (limite de 256 blocos do End vs 128 do Nether)
+    print("    -> Remapeando estruturas e chunks do Nether para The End (suporte a Y=256)...")
+    from converter.world.dimension_remapper import DimensionRemapper
+    remap_res = DimensionRemapper.remap_nether_to_end(db_dir)
+    print(f"    [OK] Remapeamento Nether -> The End: {remap_res['remapped_keys']} chaves e estruturas migradas, {remap_res['updated_command_blocks']} blocos de comando atualizados.")
+
     # Injeção in-place de ticking areas estratégicas no LevelDB
     print("    -> Injetando ticking areas estratégicas permanentes no LevelDB...")
     injected_ta = BedrockLevelDBManager.inject_ticking_areas(db_dir)
