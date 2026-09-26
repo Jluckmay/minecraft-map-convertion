@@ -374,27 +374,27 @@ class ResourcePackGenerator:
                 "distance": {
                     "air": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     },
                     "weather": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     }
                 },
                 "volumetric": {
                     "density": {
                         "air": {
-                            "max_density": 0.25,
+                            "max_density": 0.35,
                             "uniform": True
                         }
                     },
                     "media_coefficients": {
                         "air": {
-                            "scattering": [0.25, 0.05, 0.05],
+                            "scattering": [0.35, 0.08, 0.08],
                             "absorption": [0.1, 0.1, 0.1]
                         }
                     }
@@ -413,15 +413,15 @@ class ResourcePackGenerator:
                 "distance": {
                     "air": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     },
                     "weather": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     }
                 }
             }
@@ -438,15 +438,15 @@ class ResourcePackGenerator:
                 "distance": {
                     "air": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     },
                     "weather": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     }
                 }
             }
@@ -463,15 +463,15 @@ class ResourcePackGenerator:
                 "distance": {
                     "air": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     },
                     "weather": {
                         "fog_start": 0.0,
-                        "fog_end": 0.65,
-                        "fog_color": "#330808",
-                        "render_distance_type": "render"
+                        "fog_end": 42.0,
+                        "fog_color": "#701414",
+                        "render_distance_type": "fixed"
                     }
                 }
             }
@@ -481,52 +481,55 @@ class ResourcePackGenerator:
 
         biomes_dir = os.path.join(target_rp_dir, "biomes")
         os.makedirs(biomes_dir, exist_ok=True)
-        client_biome_data = {
-            "format_version": "1.21.40",
-            "minecraft:client_biome": {
-                "description": {
-                    "identifier": "the_end"
-                },
-                "components": {
-                    "minecraft:fog_appearance": {
-                        "fog_identifier": f"{safe_name}:nether_fog"
+        end_biomes = ["the_end", "end_highlands", "end_midlands", "end_barrens", "small_end_islands"]
+        biomes_dict = {}
+        for b_name in end_biomes:
+            # Bare identifier
+            cb_data = {
+                "format_version": "1.21.40",
+                "minecraft:client_biome": {
+                    "description": {
+                        "identifier": b_name
+                    },
+                    "components": {
+                        "minecraft:fog_appearance": {
+                            "fog_identifier": f"{safe_name}:nether_fog"
+                        }
                     }
                 }
             }
-        }
-        with open(os.path.join(biomes_dir, "the_end.client_biome.json"), "w", encoding="utf-8") as f:
-            json.dump(client_biome_data, f, indent=2)
+            with open(os.path.join(biomes_dir, f"{b_name}.client_biome.json"), "w", encoding="utf-8") as f:
+                json.dump(cb_data, f, indent=2)
 
-        client_biome_data_ns = {
-            "format_version": "1.21.40",
-            "minecraft:client_biome": {
-                "description": {
-                    "identifier": "minecraft:the_end"
-                },
-                "components": {
-                    "minecraft:fog_appearance": {
-                        "fog_identifier": f"{safe_name}:nether_fog"
+            # Namespaced identifier
+            cb_data_ns = {
+                "format_version": "1.21.40",
+                "minecraft:client_biome": {
+                    "description": {
+                        "identifier": f"minecraft:{b_name}"
+                    },
+                    "components": {
+                        "minecraft:fog_appearance": {
+                            "fog_identifier": f"{safe_name}:nether_fog"
+                        }
                     }
                 }
             }
-        }
-        with open(os.path.join(biomes_dir, "minecraft_the_end.client_biome.json"), "w", encoding="utf-8") as f:
-            json.dump(client_biome_data_ns, f, indent=2)
+            with open(os.path.join(biomes_dir, f"minecraft_{b_name}.client_biome.json"), "w", encoding="utf-8") as f:
+                json.dump(cb_data_ns, f, indent=2)
 
-        biomes_client_legacy = {
-            "biomes": {
-                "the_end": {
-                    "fog_identifier": f"{safe_name}:nether_fog",
-                    "water_surface_color": "#330808",
-                    "inherit_from_prior_fog": False
-                },
-                "minecraft:the_end": {
-                    "fog_identifier": f"{safe_name}:nether_fog",
-                    "water_surface_color": "#330808",
-                    "inherit_from_prior_fog": False
-                }
+            biomes_dict[b_name] = {
+                "fog_identifier": f"{safe_name}:nether_fog",
+                "water_surface_color": "#701414",
+                "inherit_from_prior_fog": False
             }
-        }
+            biomes_dict[f"minecraft:{b_name}"] = {
+                "fog_identifier": f"{safe_name}:nether_fog",
+                "water_surface_color": "#701414",
+                "inherit_from_prior_fog": False
+            }
+
+        biomes_client_legacy = {"biomes": biomes_dict}
         with open(os.path.join(target_rp_dir, "biomes_client.json"), "w", encoding="utf-8") as f:
             json.dump(biomes_client_legacy, f, indent=2)
 

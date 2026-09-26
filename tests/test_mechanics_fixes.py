@@ -491,8 +491,9 @@ class TestMechanicsFixes(unittest.TestCase):
                 f_data = json.load(f)
             self.assertEqual(f_data["minecraft:fog_settings"]["description"]["identifier"], "mazescapist:nether_fog")
             air_dist = f_data["minecraft:fog_settings"]["distance"]["air"]
-            self.assertEqual(air_dist["fog_color"], "#330808")
-            self.assertEqual(air_dist["render_distance_type"], "render")
+            self.assertEqual(air_dist["fog_color"], "#701414")
+            self.assertEqual(air_dist["render_distance_type"], "fixed")
+            self.assertEqual(air_dist["fog_end"], 42.0)
 
             # 2. Verifica aliases
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_simple.json")))
@@ -506,12 +507,17 @@ class TestMechanicsFixes(unittest.TestCase):
                 cb_data = json.load(f)
             self.assertEqual(cb_data["minecraft:client_biome"]["components"]["minecraft:fog_appearance"]["fog_identifier"], "mazescapist:nether_fog")
 
+            cb_highlands = os.path.join(rp_dest, "biomes", "end_highlands.client_biome.json")
+            self.assertTrue(os.path.exists(cb_highlands), "biomes/end_highlands.client_biome.json não foi gerado!")
+
             legacy_b = os.path.join(rp_dest, "biomes_client.json")
             self.assertTrue(os.path.exists(legacy_b), "biomes_client.json não foi gerado!")
             with open(legacy_b, "r", encoding="utf-8") as f:
                 lb_data = json.load(f)
             self.assertIn("the_end", lb_data["biomes"])
             self.assertEqual(lb_data["biomes"]["the_end"]["fog_identifier"], "mazescapist:nether_fog")
+            self.assertIn("end_highlands", lb_data["biomes"])
+            self.assertEqual(lb_data["biomes"]["end_highlands"]["fog_identifier"], "mazescapist:nether_fog")
         finally:
             shutil.rmtree(tmp_dir)
 
