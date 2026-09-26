@@ -78,10 +78,10 @@ class TestMechanicsFixes(unittest.TestCase):
         self.assertIn("looting_enchant", func_names)
 
     def test_npc_summon_translation(self):
-        """Testa a tradução do comando /summon villager com CustomName para entidade customizada Bedrock."""
+        """Testa a tradução do comando /summon villager com CustomName para entidade villager_v2 nativa Bedrock com evento e nome."""
         cmd = 'execute if score DAY_COUNTER dayCounter matches 4 run summon minecraft:villager 264 59 -2184 {CustomName:\'{"text":"Bruce"}\'}'
         translated = CommandTranslator.translate(cmd, known_npcs={"bruce"}, world_safe_name="mazescapist")
-        expected = "execute if score DAY_COUNTER dayCounter matches 4 unless entity @e[type=mazescapist:npc_bruce] run summon mazescapist:npc_bruce 264 59 -2184"
+        expected = 'execute if score DAY_COUNTER dayCounter matches 4 unless entity @e[name="Bruce"] run summon villager_v2 264 59 -2184 0 0 mazescapist:spawn_bruce "Bruce"'
         self.assertEqual(translated, expected)
 
     def test_gate_sound_translation(self):
@@ -119,8 +119,7 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertTrue(os.path.exists(rc_file))
             with open(rc_file, "r", encoding="utf-8") as f:
                 rc_data = json.load(f)
-            self.assertIn("controller.render.npc_villager_base", rc_data.get("render_controllers", {}))
-            self.assertIn("controller.render.npc_villager_masked", rc_data.get("render_controllers", {}))
+            self.assertIn("controller.render.villager_v2", rc_data.get("render_controllers", {}))
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -209,14 +208,12 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertTrue(os.path.exists(gn_func))
             with open(gn_func, "r", encoding="utf-8") as f:
                 gn_content = f.read()
-            self.assertIn("summon mazerunner:npc_bruce Bruce 264 59 -2184", gn_content)
+            self.assertIn('summon villager_v2 264 59 -2184 0 0 mazerunner:spawn_bruce "Bruce"', gn_content)
             self.assertIn("tag @e[name=Bruce] add Vil", gn_content)
-            self.assertIn("tag @e[type=mazerunner:npc_bruce] add Vil", gn_content)
             self.assertIn("tag @e[name=Boris] add Vil", gn_content)
-            self.assertIn("tag @e[type=mazerunner:npc_boris] add Vil", gn_content)
             self.assertIn("tag @e[name=Jorn] add Vil", gn_content)
-            self.assertIn("tag @e[type=mazerunner:npc_jorn] add Vil", gn_content)
             self.assertIn("tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil", gn_content)
+            self.assertIn("tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil", gn_content)
 
             # day_display
             dd_func = os.path.join(target_bp, "functions", "mazerunner", "day_display.mcfunction")

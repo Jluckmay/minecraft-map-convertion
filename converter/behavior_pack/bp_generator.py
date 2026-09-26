@@ -109,6 +109,140 @@ class BehaviorPackGenerator:
         return {"pools": b_pools}
 
     @classmethod
+    def generate_villager_v2(cls, target_bp_dir: str, safe_name: str) -> None:
+        """
+        Gera a definição nativa de minecraft:villager_v2 no behavior pack estendida
+        com component groups e eventos de spawn customizados para cada NPC (Bruce, Boris, etc).
+        Isso garante que o Bedrock utilize o pipeline de renderização nativo C++, exibindo
+        corretamente o corpo, sombras, roupas da profissão e bioma, além das trocas personalizadas.
+        """
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        possible_templates = [
+            os.path.join(os.path.dirname(__file__), "vanilla_villager_v2.json"),
+            os.path.join(base_dir, "packs", "mazescapist_bp", "entities", "villager_v2.json"),
+        ]
+        template_path = None
+        for p in possible_templates:
+            if os.path.exists(p):
+                template_path = p
+                break
+
+        if not template_path:
+            return
+
+        with open(template_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        ent = data.get("minecraft:entity", {})
+        if "description" in ent:
+            ent["description"]["is_summonable"] = True
+            ent["description"]["is_spawnable"] = True
+
+        if "component_groups" not in ent:
+            ent["component_groups"] = {}
+        if "events" not in ent:
+            ent["events"] = {}
+
+        npc_defs = [
+            {"slug": "bruce", "name": "Bruce", "variant": 1, "mark_variant": 3, "trade_file": "trading/bruce_trades.json"},
+            {"slug": "boris", "name": "Boris", "variant": 3, "mark_variant": 3, "trade_file": "trading/boris_trades.json"},
+            {"slug": "joe", "name": "Joe", "variant": 4, "mark_variant": 3, "trade_file": "trading/joe_trades.json"},
+            {"slug": "tobias", "name": "Tobias", "variant": 9, "mark_variant": 3, "trade_file": "trading/tobias_trades.json"},
+            {"slug": "george", "name": "George", "variant": 11, "mark_variant": 3, "trade_file": "trading/george_trades.json"},
+            {"slug": "erik", "name": "Erik", "variant": 7, "mark_variant": 3, "trade_file": "trading/erik_trades.json"},
+            {"slug": "adam", "name": "Adam", "variant": 13, "mark_variant": 3, "trade_file": "trading/adam_trades.json"},
+            {"slug": "joakim", "name": "Joakim", "variant": 8, "mark_variant": 3, "trade_file": "trading/joakim_trades.json"},
+            {"slug": "seth", "name": "Seth", "variant": 5, "mark_variant": 3, "trade_file": "trading/seth_trades.json"},
+            {"slug": "jorn", "name": "Jorn", "variant": 6, "mark_variant": 3, "trade_file": "trading/jorn_trades.json"},
+            {"slug": "heri", "name": "Heri", "variant": 9, "mark_variant": 2, "trade_file": "trading/heri_trades.json"},
+            {"slug": "kai", "name": "Kai", "variant": 4, "mark_variant": 2, "trade_file": "trading/kai_trades.json"},
+            {"slug": "angus", "name": "Angus", "variant": 5, "mark_variant": 2, "trade_file": "trading/angus_trades.json"},
+            {"slug": "ylva", "name": "Ylva", "variant": 8, "mark_variant": 2, "trade_file": "trading/ylva_trades.json"},
+            {"slug": "jonne", "name": "Jonne", "variant": 7, "mark_variant": 2, "trade_file": "trading/jonne_trades.json"},
+        ]
+
+        for npc in npc_defs:
+            slug = npc["slug"]
+            name = npc["name"]
+            variant = npc["variant"]
+            mark_variant = npc["mark_variant"]
+            trade_file = npc["trade_file"]
+            biome_group = "savanna_villager" if mark_variant == 3 else "jungle_villager"
+
+            cg_name = f"{safe_name}:npc_{slug}"
+            ent["component_groups"][cg_name] = {
+                "minecraft:variant": {"value": variant},
+                "minecraft:mark_variant": {"value": mark_variant},
+                "minecraft:economy_trade_table": {
+                    "display_name": name,
+                    "table": trade_file,
+                    "new_screen": True,
+                    "persist_trades": True
+                },
+                "minecraft:trade_table": {
+                    "display_name": name,
+                    "table": trade_file
+                },
+                "minecraft:movement": {"value": 0.0},
+                "minecraft:movement.basic": {},
+                "minecraft:damage_sensor": {
+                    "triggers": [{"cause": "all", "deals_damage": False}]
+                },
+                "minecraft:nameable": {
+                    "always_show": True,
+                    "allow_name_tag_renaming": False
+                },
+                "minecraft:type_family": {
+                    "family": ["villager", "peasant", "mob", "npc"]
+                },
+                "minecraft:behavior.trade_interest": {
+                    "priority": 1,
+                    "within_radius": 6,
+                    "interest_time": 45,
+                    "remove_item_time": 1,
+                    "carried_item_switch_time": 2,
+                    "cooldown": 2
+                },
+                "minecraft:interact": {
+                    "interactions": [
+                        {
+                            "on_interact": {
+                                "filters": {
+                                    "test": "is_family",
+                                    "subject": "other",
+                                    "value": "player"
+                                }
+                            },
+                            "open_trading": True
+                        }
+                    ]
+                }
+            }
+
+            ev_name = f"{safe_name}:spawn_{slug}"
+            ent["events"][ev_name] = {
+                "add": {
+                    "component_groups": [
+                        "adult",
+                        biome_group,
+                        cg_name
+                    ]
+                },
+                "remove": {
+                    "component_groups": [
+                        "baby",
+                        "child_schedule"
+                    ]
+                }
+            }
+
+        entities_dir = os.path.join(target_bp_dir, "entities")
+        os.makedirs(entities_dir, exist_ok=True)
+        out_file = os.path.join(entities_dir, "villager_v2.json")
+        with open(out_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    @classmethod
     def generate(cls, datapacks_dir: str, target_bp_dir: str, world_name: str, safe_name: str, rp_header_uuid: str) -> Dict[str, Any]:
         if os.path.exists(target_bp_dir):
             shutil.rmtree(target_bp_dir, ignore_errors=True)
@@ -346,6 +480,8 @@ class BehaviorPackGenerator:
                     with open(root_func_path, "w", encoding="utf-8") as rf:
                         rf.write(content_str)
                     converted_funcs += 1
+        # Gera a definição nativa de minecraft:villager_v2 com component groups e eventos dos NPCs
+        cls.generate_villager_v2(target_bp_dir, safe_name)
 
         # 3. Conversão e Cópia de Loot Tables de Entidades (Drops de Esmeraldas)
         target_loot_dir = os.path.join(target_bp_dir, "loot_tables", "entities")
@@ -406,7 +542,8 @@ class BehaviorPackGenerator:
             'tellraw @a {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             "function custom/generates_npc",
             "function custom/generates_chest",
-            "kill @e[type=villager,tag=!Vil]"
+            "kill @e[type=villager,tag=!Vil]",
+            "kill @e[type=villager_v2,tag=!Vil]"
         ]
         morning_content = "\n".join(morning_lines) + "\n"
         for d in (world_func_dir, func_dir, custom_func_dir):
@@ -433,86 +570,98 @@ class BehaviorPackGenerator:
         generates_npc_lines = [
             f"# {world_name} Newcomer Villagers Spawning in Loading Area",
             "",
+            "# Cleanup any legacy invisible custom entities",
+            f"kill @e[type={safe_name}:npc_bruce]",
+            f"kill @e[type={safe_name}:npc_boris]",
+            f"kill @e[type={safe_name}:npc_joe]",
+            f"kill @e[type={safe_name}:npc_tobias]",
+            f"kill @e[type={safe_name}:npc_george]",
+            f"kill @e[type={safe_name}:npc_erik]",
+            f"kill @e[type={safe_name}:npc_adam]",
+            f"kill @e[type={safe_name}:npc_joakim]",
+            f"kill @e[type={safe_name}:npc_seth]",
+            f"kill @e[type={safe_name}:npc_jorn]",
+            "",
             "# Day 4: Bruce (Farmer)",
-            f'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] unless entity @e[type={safe_name}:npc_bruce] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] unless entity @e[type={safe_name}:npc_bruce] run summon {safe_name}:npc_bruce Bruce 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 4.. unless entity @e[name=Bruce] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_bruce "Bruce"',
             'tag @e[name=Bruce] add Vil',
-            f'tag @e[type={safe_name}:npc_bruce] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 9: Boris (Shepherd)",
-            f'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] unless entity @e[type={safe_name}:npc_boris] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] unless entity @e[type={safe_name}:npc_boris] run summon {safe_name}:npc_boris Boris 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 9.. unless entity @e[name=Boris] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_boris "Boris"',
             'tag @e[name=Boris] add Vil',
-            f'tag @e[type={safe_name}:npc_boris] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 13: Joe (Fletcher)",
-            f'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] unless entity @e[type={safe_name}:npc_joe] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] unless entity @e[type={safe_name}:npc_joe] run summon {safe_name}:npc_joe Joe 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 13.. unless entity @e[name=Joe] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_joe "Joe"',
             'tag @e[name=Joe] add Vil',
-            f'tag @e[type={safe_name}:npc_joe] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 17: Tobias (Weaponsmith)",
-            f'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] unless entity @e[type={safe_name}:npc_tobias] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] unless entity @e[type={safe_name}:npc_tobias] run summon {safe_name}:npc_tobias Tobias 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 17.. unless entity @e[name=Tobias] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_tobias "Tobias"',
             'tag @e[name=Tobias] add Vil',
-            f'tag @e[type={safe_name}:npc_tobias] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 21: George (Butcher)",
-            f'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] unless entity @e[type={safe_name}:npc_george] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] unless entity @e[type={safe_name}:npc_george] run summon {safe_name}:npc_george George 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 21.. unless entity @e[name=George] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_george "George"',
             'tag @e[name=George] add Vil',
-            f'tag @e[type={safe_name}:npc_george] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 26: Erik (Cleric)",
-            f'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] unless entity @e[type={safe_name}:npc_erik] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] unless entity @e[type={safe_name}:npc_erik] run summon {safe_name}:npc_erik Erik 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 26.. unless entity @e[name=Erik] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_erik "Erik"',
             'tag @e[name=Erik] add Vil',
-            f'tag @e[type={safe_name}:npc_erik] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 31: Adam (Mason)",
-            f'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] unless entity @e[type={safe_name}:npc_adam] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] unless entity @e[type={safe_name}:npc_adam] run summon {safe_name}:npc_adam Adam 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 31.. unless entity @e[name=Adam] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_adam "Adam"',
             'tag @e[name=Adam] add Vil',
-            f'tag @e[type={safe_name}:npc_adam] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 38: Joakim (Armorer)",
-            f'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] unless entity @e[type={safe_name}:npc_joakim] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] unless entity @e[type={safe_name}:npc_joakim] run summon {safe_name}:npc_joakim Joakim 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 38.. unless entity @e[name=Joakim] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_joakim "Joakim"',
             'tag @e[name=Joakim] add Vil',
-            f'tag @e[type={safe_name}:npc_joakim] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 47: Seth (Librarian)",
-            f'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] unless entity @e[type={safe_name}:npc_seth] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] unless entity @e[type={safe_name}:npc_seth] run summon {safe_name}:npc_seth Seth 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            f'execute if score DAY_COUNTER dayCounter matches 47.. unless entity @e[name=Seth] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_seth "Seth"',
             'tag @e[name=Seth] add Vil',
-            f'tag @e[type={safe_name}:npc_seth] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
             'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
             "",
             "# Day 55: Jorn (Cartographer) & Redstone Trigger",
-            f'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] unless entity @e[type={safe_name}:npc_jorn] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
-            f'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] unless entity @e[type={safe_name}:npc_jorn] run summon {safe_name}:npc_jorn Jorn 264 59 -2184',
+            f'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] run tellraw @a {{"rawtext":[{{"text":"A"}},{{"text":"§a§l newcomer"}},{{"text":" has arrived in the"}},{{"text":"§6§l§o loading area"}},{{"text":"!"}}]}}',
+            'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] run setblock 279 1 -2177 redstone_block',
+            f'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] run summon villager_v2 264 59 -2184 0 0 {safe_name}:spawn_jorn "Jorn"',
             'tag @e[name=Jorn] add Vil',
-            f'tag @e[type={safe_name}:npc_jorn] add Vil',
             'tag @e[type=villager,x=264,y=59,z=-2184,r=3] add Vil',
-            'tag @e[x=264,y=59,z=-2184,r=3] add Vil',
-            'execute if score DAY_COUNTER dayCounter matches 55.. unless entity @e[name=Jorn] run setblock 279 1 -2177 redstone_block'
+            'tag @e[type=villager_v2,x=264,y=59,z=-2184,r=3] add Vil',
+            'tag @e[x=264,y=59,z=-2184,r=3] add Vil'
         ]
         generates_npc_content = "\n".join(generates_npc_lines) + "\n"
         for d in (world_func_dir, func_dir, custom_func_dir):

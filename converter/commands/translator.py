@@ -311,11 +311,19 @@ class CommandTranslator:
                     if not matched_npc and clean_type == "villager":
                         matched_npc = slug
 
+                    if matched_npc and clean_type == "villager":
+                        return f"execute unless entity @e[name=\"{found_name}\"] run {prefix}villager_v2 {x} {y} {z} 0 0 {world_safe_name}:spawn_{matched_npc} \"{found_name}\""
                     if matched_npc:
                         target_entity = f"{world_safe_name}:npc_{matched_npc}"
                         return f"execute unless entity @e[type={target_entity}] run {prefix}{target_entity} {x} {y} {z}"
+                    if clean_type == "villager":
+                        return f"{prefix}villager_v2 {x} {y} {z} 0 0 \"\" \"{found_name}\""
                     return f"{prefix}{clean_type} {x} {y} {z} 0 0 \"\" \"{found_name}\""
+                if clean_type == "villager":
+                    return f"{prefix}villager_v2 {x} {y} {z}"
                 return f"{prefix}{clean_type} {x} {y} {z}"
+            if clean_type == "villager":
+                return f"{prefix}villager_v2 {x} {y} {z}"
             return f"{prefix}{clean_type} {x} {y} {z}"
 
         # 11. setblock / fill - limpeza de namespace

@@ -106,7 +106,7 @@ class TestModularConverterPipeline(unittest.TestCase):
         """Testa conversão de summon com CustomName para sintaxe Bedrock com entidade customizada e idempotência."""
         cmd = 'summon villager 264 59 -2184 {CustomName:\'{"text":"Bruce"}\'}'
         res = CommandTranslator.translate(cmd)
-        self.assertEqual(res, 'execute unless entity @e[type=custom:npc_bruce] run summon custom:npc_bruce 264 59 -2184')
+        self.assertEqual(res, 'execute unless entity @e[name="Bruce"] run summon villager_v2 264 59 -2184 0 0 custom:spawn_bruce "Bruce"')
 
         # Para mob não aldeão, verifica sintaxe válida Bedrock com nametag
         cmd_mob = 'summon zombie 264 59 -2184 {CustomName:\'{"text":"Boss"}\'}'
