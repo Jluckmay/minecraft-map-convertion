@@ -865,6 +865,8 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        elif coord == (319, 1, -2160):
+                                            new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
                                         else:
                                             new_cmd = convert_func(cmd)
                                         if new_cmd != cmd:
@@ -1949,9 +1951,9 @@ class MapConverterApp:
             "setblock 287 100 -2168 daylight_detector_inverted",
             "setblock 286 1 -2168 redstone_block",
             "scoreboard players set #world world_init 1",
-            "execute as @a at @s in overworld if entity @s[r=0] run fog @s remove nether_fog",
-            "execute as @a at @s in overworld if entity @s[r=0] run fog @s remove nether_fog_vanilla",
-            "execute as @a at @s in overworld if entity @s[r=0] run tag @s remove in_nether_sector",
+            "execute as @a at @s in overworld if entity @s[r=2] run fog @s remove nether_fog",
+            "execute as @a at @s in overworld if entity @s[r=2] run fog @s remove nether_fog_vanilla",
+            "execute as @a at @s in overworld if entity @s[r=2] run tag @s remove in_nether_sector",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
         init_content = "\n".join(init_lines) + "\n"
@@ -1971,9 +1973,9 @@ class MapConverterApp:
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @s dayCounter 0",
             "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
-            "execute as @s at @s in overworld if entity @s[r=0] run fog @s remove nether_fog",
-            "execute as @s at @s in overworld if entity @s[r=0] run fog @s remove nether_fog_vanilla",
-            "execute as @s at @s in overworld if entity @s[r=0] run tag @s remove in_nether_sector",
+            "execute as @s at @s in overworld if entity @s[r=2] run fog @s remove nether_fog",
+            "execute as @s at @s in overworld if entity @s[r=2] run fog @s remove nether_fog_vanilla",
+            "execute as @s at @s in overworld if entity @s[r=2] run tag @s remove in_nether_sector",
             f"execute if score #world world_init matches 0 run function {self.safe_name}/init_world",
             f'tellraw @s {{"rawtext":[{{"text":"§a[{self.world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
         ]
@@ -2012,14 +2014,23 @@ class MapConverterApp:
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {self.safe_name}/player_join",
             f"# 4. Gerenciamento dinamico de nevoa customizada do Nether no The End",
-            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run fog @s push minecraft:fog_crimson_forest nether_fog_vanilla",
-            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run fog @s push {self.safe_name}:nether_fog nether_fog",
-            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run tag @s add in_nether_sector",
-            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run fog @s remove nether_fog",
-            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run fog @s remove nether_fog_vanilla",
-            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run tag @s remove in_nether_sector",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push minecraft:fog_crimson_forest nether_fog_vanilla",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push {self.safe_name}:nether_fog nether_fog",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run tag @s add in_nether_sector",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run fog @s remove nether_fog",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run fog @s remove nether_fog_vanilla",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run tag @s remove in_nether_sector",
             "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog",
             "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog_vanilla",
+            "execute in overworld run tag @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove in_nether_sector",
+            f"# Manutencao de atributos e efeitos de combate para chefes (Reaper, Prometheus, Ascended Pillager)",
+            "execute as @e[name=Reaper] run effect @s speed 2 1 true",
+            "execute as @e[name=Reaper] run effect @s resistance 2 2 true",
+            "execute as @e[name=Reaper] run effect @s strength 2 1 true",
+            "execute as @e[name=Prometheus] run effect @s resistance 2 2 true",
+            "execute as @e[name=Prometheus] run effect @s strength 2 1 true",
+            'execute as @e[name="Ascended Pillager"] run effect @s resistance 2 2 true',
+            'execute as @e[name="Ascended Pillager"] run effect @s strength 2 1 true',
             f"# 5. Manutencao dos detectores de ciclo dia/noite",
             "execute if score #world world_init matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute if score #world world_init matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",

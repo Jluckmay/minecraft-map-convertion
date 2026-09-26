@@ -551,10 +551,44 @@ class TestMechanicsFixes(unittest.TestCase):
             tick_func = os.path.join(bp_dest, "functions", "tick.mcfunction")
             with open(tick_func, "r", encoding="utf-8") as f:
                 tick_txt = f.read()
-            self.assertIn("execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=0] run fog @s push mazescapist:nether_fog nether_fog", tick_txt)
-            self.assertIn("execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=0] run fog @s remove nether_fog", tick_txt)
+            self.assertIn("execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push mazescapist:nether_fog nether_fog", tick_txt)
+            self.assertIn("execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run fog @s remove nether_fog", tick_txt)
+            self.assertIn("execute as @e[name=Reaper] run effect @s speed 2 1 true", tick_txt)
+            self.assertIn("execute as @e[name=Prometheus] run effect @s strength 2 1 true", tick_txt)
+            self.assertIn('execute as @e[name="Ascended Pillager"] run effect @s strength 2 1 true', tick_txt)
         finally:
             shutil.rmtree(tmp_dir)
+
+    def test_boss_summon_translation(self):
+        """Testa se os monstros chefes (Reaper, Prometheus, Ascended Pillager) usam minecraft:entity_spawned e tipos corretos."""
+        # Reaper (Spider com passageiro Wither Skeleton no Java)
+        cmd_reaper = 'execute if entity @p[distance=..50] run summon spider ~ ~10 ~0.5 {Health:150f,Tags:["rep"],Passengers:[{id:"minecraft:wither_skeleton",Health:150f,Tags:["red"],CustomName:\'{"text":"Reaper","color":"dark_red","bold":true}\'}]}'
+        t_reaper = CommandTranslator.translate(cmd_reaper, world_safe_name="the_maze")
+        self.assertEqual(t_reaper, 'execute if entity @p[r=50] run summon wither_skeleton ~ ~10 ~0.5 0 0 minecraft:entity_spawned "Reaper"')
+
+        # Prometheus
+        cmd_prom = 'summon minecraft:wither_skeleton 12 69 -1611 {PersistenceRequired:0b,Tags:["Curse"],CustomName:\'{"text":"Prometheus","color":"gold","bold":true,"italic":true}\'}'
+        t_prom = CommandTranslator.translate(cmd_prom, world_safe_name="the_maze")
+        self.assertEqual(t_prom, 'summon wither_skeleton 12 69 -1611 0 0 minecraft:entity_spawned "Prometheus"')
+
+        # Ascended Pillager
+        cmd_pil = '/summon minecraft:evoker 1009 185 1168 {PersistenceRequired:1b,Health:200f,Tags:["evok"],CustomName:\'{"text":"Ascended Pillager","color":"gold","bold":true}\'}'
+        t_pil = CommandTranslator.translate(cmd_pil, world_safe_name="the_maze")
+        self.assertEqual(t_pil, 'summon evoker 1009 185 1168 0 0 minecraft:entity_spawned "Ascended Pillager"')
+
+    def test_spawner_preservation_translation(self):
+        """Testa se o comando data merge block {Delay:0} não destrói spawners customizados com setblock mob_spawner."""
+        cmd_spawner = 'data merge block 688 52 -2283 {Delay:0}'
+        t_spawner = CommandTranslator.translate(cmd_spawner)
+        self.assertNotIn("setblock", t_spawner)
+        self.assertIn("Spawner preservado", t_spawner)
+
+    def test_night_vision_suppression_in_nether(self):
+        """Testa se night_vision contínuo em setores do Nether é suprimido para não desativar a névoa no Bedrock."""
+        cmd_nv = '/execute in the_nether run execute positioned as @a[x=-7,y=79,z=-670,dx=547,dy=140,dz=355] run effect give @p night_vision 11 0 true'
+        t_nv = CommandTranslator.translate(cmd_nv)
+        self.assertTrue(t_nv.startswith("#"))
+        self.assertIn("suprimido", t_nv)
 
 
 if __name__ == "__main__":

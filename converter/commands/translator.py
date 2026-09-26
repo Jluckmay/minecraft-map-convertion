@@ -165,6 +165,10 @@ class CommandTranslator:
         if s.startswith('/'):
             s = s[1:].strip()
 
+        # Supressão de night_vision nos setores do Nether para preservar a renderização da névoa no RenderDragon
+        if "night_vision" in s and any(k in s for k in ("the_nether", "the_end", "-670", "-572", "nether")):
+            return "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
+
         # Correção de erros tipográficos em comandos herdados (ex: xecute -> execute)
         if s.startswith("xecute "):
             s = "execute " + s[7:].strip()
@@ -182,6 +186,8 @@ class CommandTranslator:
             # Normalização de namespace em chamadas de função
             exec_prefix = re.sub(r'\bfunction\s+([a-zA-Z0-9._-]+):([a-zA-Z0-9._/-]+)', r'function \1/\2', exec_prefix)
             trans_inner = cls.translate(run_cmd, known_npcs, world_safe_name)
+            if trans_inner.startswith("#"):
+                return trans_inner
             if trans_inner.startswith("execute "):
                 subcmd = trans_inner[len("execute "):]
                 return f"{exec_prefix} {subcmd}"
@@ -216,7 +222,7 @@ class CommandTranslator:
             match = re.match(r"data merge block (-?\d+) (-?\d+) (-?\d+) .*", s)
             if match:
                 x, y, z = match.groups()
-                return f"setblock {x} {y} {z} mob_spawner"
+                return f"# [Bedrock] Spawner preservado em {x} {y} {z}; ticks naturalmente"
             return f"# [Bedrock Conversion] {s}"
 
         # 3. Tradução de seletores
@@ -303,7 +309,12 @@ class CommandTranslator:
                     found_name = name_match.group(1) or name_match.group(2)
                     slug = re.sub(r'[^a-zA-Z0-9_]', '_', found_name.lower().replace("ö", "o").replace("ø", "o")).strip('_')
                     slug_stripped = slug.replace("_", "")
-                    
+
+                    # Tratamento do chefe Reaper (Wither Skeleton montado em Spider Jockey no Java)
+                    if clean_type == "spider" and ("wither_skeleton" in nbt_part or found_name.lower() == "reaper"):
+                        clean_type = "wither_skeleton"
+                        found_name = "Reaper"
+
                     matched_npc = None
                     if known_npcs:
                         for cand in (slug, slug_stripped, found_name.lower()):
@@ -319,8 +330,8 @@ class CommandTranslator:
                         target_entity = f"{world_safe_name}:npc_{matched_npc}"
                         return f"execute unless entity @e[type={target_entity}] run {prefix}{target_entity} {x} {y} {z}"
                     if clean_type == "villager":
-                        return f"{prefix}villager_v2 {x} {y} {z} 0 0 \"\" \"{found_name}\""
-                    return f"{prefix}{clean_type} {x} {y} {z} 0 0 \"\" \"{found_name}\""
+                        return f"{prefix}villager_v2 {x} {y} {z} 0 0 minecraft:entity_spawned \"{found_name}\""
+                    return f"{prefix}{clean_type} {x} {y} {z} 0 0 minecraft:entity_spawned \"{found_name}\""
                 if clean_type == "villager":
                     return f"{prefix}villager_v2 {x} {y} {z}"
                 return f"{prefix}{clean_type} {x} {y} {z}"

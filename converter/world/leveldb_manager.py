@@ -227,6 +227,8 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        elif coord == (319, 1, -2160):
+                                            new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
                                         else:
                                             new_cmd = convert_func(orig_cmd)
                                         if new_cmd != orig_cmd:
@@ -292,6 +294,8 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        elif coord == (319, 1, -2160):
+                                            new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
                                         else:
                                             new_cmd = convert_func(orig_cmd)
                                         if new_cmd != orig_cmd:

@@ -111,7 +111,7 @@ class TestModularConverterPipeline(unittest.TestCase):
         # Para mob não aldeão, verifica sintaxe válida Bedrock com nametag
         cmd_mob = 'summon zombie 264 59 -2184 {CustomName:\'{"text":"Boss"}\'}'
         res_mob = CommandTranslator.translate(cmd_mob)
-        self.assertEqual(res_mob, 'summon zombie 264 59 -2184 0 0 "" "Boss"')
+        self.assertEqual(res_mob, 'summon zombie 264 59 -2184 0 0 minecraft:entity_spawned "Boss"')
 
     def test_inventory_manager_create_bedrock_item(self):
         """Testa construção de item Bedrock a partir de dados Java."""
