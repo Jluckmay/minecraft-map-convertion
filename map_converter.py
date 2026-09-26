@@ -857,10 +857,12 @@ class BedrockLevelDBManager:
                                             new_cmd = f"function {safe_name}/day_display"
                                         elif safe_name and coord == (279, 1, -2192):
                                             new_cmd = f"function {safe_name}/day_title"
-                                        elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
+                                        elif safe_name and coord == (271, 1, -2201):
                                             new_cmd = f"function {safe_name}/cycle_night"
+                                        elif safe_name and coord == (306, 2, -2102):
+                                            new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
-                                            new_cmd = f"function {safe_name}/init_world"
+                                            new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         else:
                                             new_cmd = convert_func(cmd)
                                         if new_cmd != cmd:
@@ -1750,7 +1752,7 @@ class MapConverterApp:
             "setblock 287 99 -2168 bedrock",
             "setblock 286 100 -2168 daylight_detector",
             "setblock 287 100 -2168 daylight_detector_inverted",
-            f"function {self.safe_name}/cycle_morning",
+            "setblock 286 1 -2168 redstone_block",
             "scoreboard players set #world world_init 1",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
@@ -1772,7 +1774,6 @@ class MapConverterApp:
             "scoreboard players add @s dayCounter 0",
             "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute if score #world world_init matches 0 run function {self.safe_name}/init_world",
-            'titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             f'tellraw @s {{"rawtext":[{{"text":"§a[{self.world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
         ]
         player_join_content = "\n".join(player_join_lines) + "\n"

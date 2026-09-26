@@ -12,7 +12,9 @@ import sys
 import json
 import unittest
 import tempfile
+import io
 import shutil
+import nbtlib
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if BASE_DIR not in sys.path:
@@ -21,6 +23,7 @@ if BASE_DIR not in sys.path:
 from converter.commands.translator import CommandTranslator
 from converter.behavior_pack.bp_generator import BehaviorPackGenerator
 from converter.resource_pack.rp_generator import ResourcePackGenerator
+from converter.world.leveldb_manager import BedrockLevelDBManager
 
 
 class TestMechanicsFixes(unittest.TestCase):
@@ -140,6 +143,8 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("scoreboard objectives add world_init dummy", content)
             self.assertIn("scoreboard players set #world world_init 1", content)
             self.assertIn("setblock 286 100 -2168 daylight_detector", content)
+            self.assertIn("setblock 286 1 -2168 redstone_block", content)
+            self.assertNotIn("cycle_morning", content)
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -253,7 +258,7 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("tag @s add joined", j_content)
             self.assertIn("scoreboard players add DAY_COUNTER dayCounter 0", j_content)
             self.assertIn("execute if score #world world_init matches 0 run function mazerunner/init_world", j_content)
-            self.assertIn("titleraw @s title", j_content)
+            self.assertNotIn("titleraw @s title", j_content)
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -325,6 +330,68 @@ class TestMechanicsFixes(unittest.TestCase):
                     min_x <= tx <= max_x and min_z <= tz <= max_z,
                     f"Alvo da estação ({tx}, {tz}) deve estar contido em maze_station [{min_x}..{max_x}, {min_z}..{max_z}]"
                 )
+        finally:
+            shutil.rmtree(tmp_dir)
+
+    def test_elevator_arrival_day_counter(self):
+        """Testa se (306, 2, -2102) fixa o Dia 1 e nao executa cycle_night, e (271, 1, -2201) executa cycle_night."""
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            db_dir = os.path.join(tmp_dir, "db")
+            os.makedirs(db_dir)
+
+            cbs = [
+                (306, 2, -2102, "scoreboard players add DAY_COUNTER dayCounter 1"),
+                (271, 1, -2201, "scoreboard players add DAY_COUNTER dayCounter 1"),
+                (377, 6, -2117, "scoreboard players reset DAY_COUNTER dayCounter"),
+                (273, 1, -2200, "scoreboard players reset DAY_COUNTER dayCounter"),
+            ]
+
+            entries = []
+            for i, (x, y, z, cmd) in enumerate(cbs):
+                tag = nbtlib.Compound({
+                    "id": nbtlib.String("CommandBlock"),
+                    "x": nbtlib.Int(x),
+                    "y": nbtlib.Int(y),
+                    "z": nbtlib.Int(z),
+                    "Command": nbtlib.String(cmd),
+                    "CustomName": nbtlib.String("@"),
+                    "ExecuteOnFirstTick": nbtlib.Byte(0),
+                    "auto": nbtlib.Byte(0),
+                })
+                buf = io.BytesIO()
+                nbtlib.File(tag).write(buf, byteorder="little")
+                entries.append((f"chunk_key_{i}".encode("ascii"), buf.getvalue()))
+
+            ldb_bytes = BedrockLevelDBManager.build_ldb([entries])
+            ldb_path = os.path.join(db_dir, "000001.ldb")
+            with open(ldb_path, "wb") as f:
+                f.write(ldb_bytes)
+
+            count = BedrockLevelDBManager.update_command_blocks(
+                db_dir,
+                lambda cmd: CommandTranslator.translate(cmd, set(), "mazerunner"),
+                safe_name="mazerunner"
+            )
+            self.assertEqual(count, 4)
+
+            with open(ldb_path, "rb") as f:
+                updated_raw = f.read()
+            read_blocks = BedrockLevelDBManager.read_ldb_all_entries(updated_raw)
+
+            results = {}
+            for block_entries in read_blocks:
+                for k, v in block_entries:
+                    tag = nbtlib.File.from_fileobj(io.BytesIO(v), byteorder="little")
+                    coord = (int(tag.get("x", 0)), int(tag.get("y", 0)), int(tag.get("z", 0)))
+                    results[coord] = str(tag.get("Command", ""))
+
+            self.assertEqual(results[(306, 2, -2102)], "scoreboard players set DAY_COUNTER dayCounter 1")
+            self.assertNotIn("cycle_night", results[(306, 2, -2102)])
+            self.assertEqual(results[(271, 1, -2201)], "function mazerunner/cycle_night")
+            self.assertEqual(results[(377, 6, -2117)], "scoreboard players set DAY_COUNTER dayCounter 1")
+            self.assertNotIn("init_world", results[(377, 6, -2117)])
+            self.assertEqual(results[(273, 1, -2200)], "scoreboard players set DAY_COUNTER dayCounter 1")
         finally:
             shutil.rmtree(tmp_dir)
 

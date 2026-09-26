@@ -755,7 +755,7 @@ class BehaviorPackGenerator:
             "setblock 287 99 -2168 bedrock",
             "setblock 286 100 -2168 daylight_detector",
             "setblock 287 100 -2168 daylight_detector_inverted",
-            f"function {safe_name}/cycle_morning",
+            "setblock 286 1 -2168 redstone_block",
             "scoreboard players set #world world_init 1",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{world_name}]§r World and mechanics successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
@@ -777,7 +777,6 @@ class BehaviorPackGenerator:
             "scoreboard players add @s dayCounter 0",
             "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute if score #world world_init matches 0 run function {safe_name}/init_world",
-            'titleraw @s title {"rawtext":[{"text":"§7Day "},{"score":{"name":"DAY_COUNTER","objective":"dayCounter"}}]}',
             f'tellraw @s {{"rawtext":[{{"text":"§a[{world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
         ]
         player_join_content = "\n".join(player_join_lines) + "\n"

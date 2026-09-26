@@ -195,55 +195,58 @@ class BedrockLevelDBManager:
             return 0
 
         # Tentativa primária: utilizar o motor nativo C++ da Mojang (amulet-leveldb / leveldb)
-        try:
-            import leveldb
-            db = leveldb.LevelDB(db_dir)
-            total_modified = 0
-            for key, val in db.iterate():
-                if b"CommandBlock" in val or b"Command" in val:
-                    try:
-                        buf = io.BytesIO(val)
-                        tags = []
-                        val_modified = False
-                        while buf.tell() < len(val):
-                            try:
-                                tag = nbtlib.File.from_fileobj(buf, byteorder="little")
-                                tags.append(tag)
-                                if tag.get("id") == "CommandBlock" and "Command" in tag:
-                                    orig_cmd = str(tag["Command"])
-                                    coord = (int(tag.get("x", 0)), int(tag.get("y", 0)), int(tag.get("z", 0)))
-                                    if safe_name and coord == (276, 1, -2191):
-                                        new_cmd = f"function {safe_name}/morning_gate"
-                                    elif safe_name and coord == (279, 1, -2191):
-                                        new_cmd = f"function {safe_name}/generates_npc"
-                                    elif safe_name and coord == (280, 1, -2192):
-                                        new_cmd = f"function {safe_name}/day_display"
-                                    elif safe_name and coord == (279, 1, -2192):
-                                        new_cmd = f"function {safe_name}/day_title"
-                                    elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
-                                        new_cmd = f"function {safe_name}/cycle_night"
-                                    elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
-                                        new_cmd = f"function {safe_name}/init_world"
-                                    else:
-                                        new_cmd = convert_func(orig_cmd)
-                                    if new_cmd != orig_cmd:
-                                        tag["Command"] = nbtlib.String(new_cmd)
-                                        val_modified = True
-                                        total_modified += 1
-                            except Exception:
-                                break
+        if any(f.startswith("MANIFEST") or f == "CURRENT" for f in os.listdir(db_dir)):
+            try:
+                import leveldb
+                db = leveldb.LevelDB(db_dir)
+                total_modified = 0
+                for key, val in db.iterate():
+                    if b"CommandBlock" in val or b"Command" in val:
+                        try:
+                            buf = io.BytesIO(val)
+                            tags = []
+                            val_modified = False
+                            while buf.tell() < len(val):
+                                try:
+                                    tag = nbtlib.File.from_fileobj(buf, byteorder="little")
+                                    tags.append(tag)
+                                    if tag.get("id") == "CommandBlock" and "Command" in tag:
+                                        orig_cmd = str(tag["Command"])
+                                        coord = (int(tag.get("x", 0)), int(tag.get("y", 0)), int(tag.get("z", 0)))
+                                        if safe_name and coord == (276, 1, -2191):
+                                            new_cmd = f"function {safe_name}/morning_gate"
+                                        elif safe_name and coord == (279, 1, -2191):
+                                            new_cmd = f"function {safe_name}/generates_npc"
+                                        elif safe_name and coord == (280, 1, -2192):
+                                            new_cmd = f"function {safe_name}/day_display"
+                                        elif safe_name and coord == (279, 1, -2192):
+                                            new_cmd = f"function {safe_name}/day_title"
+                                        elif safe_name and coord == (271, 1, -2201):
+                                            new_cmd = f"function {safe_name}/cycle_night"
+                                        elif safe_name and coord == (306, 2, -2102):
+                                            new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
+                                            new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        else:
+                                            new_cmd = convert_func(orig_cmd)
+                                        if new_cmd != orig_cmd:
+                                            tag["Command"] = nbtlib.String(new_cmd)
+                                            val_modified = True
+                                            total_modified += 1
+                                except Exception:
+                                    break
 
-                        if val_modified and tags:
-                            out_buf = io.BytesIO()
-                            for tag in tags:
-                                tag.write(out_buf, byteorder="little")
-                            db.put(key, out_buf.getvalue())
-                    except Exception:
-                        pass
-            db.close()
-            return total_modified
-        except Exception:
-            pass
+                            if val_modified and tags:
+                                out_buf = io.BytesIO()
+                                for tag in tags:
+                                    tag.write(out_buf, byteorder="little")
+                                db.put(key, out_buf.getvalue())
+                        except Exception:
+                            pass
+                db.close()
+                return total_modified
+            except Exception:
+                pass
 
         # Fallback: leitor/escritor embutido caso o módulo nativo não esteja disponível
         total_modified = 0
@@ -283,10 +286,12 @@ class BedrockLevelDBManager:
                                             new_cmd = f"function {safe_name}/day_display"
                                         elif safe_name and coord == (279, 1, -2192):
                                             new_cmd = f"function {safe_name}/day_title"
-                                        elif safe_name and coord in ((271, 1, -2201), (306, 2, -2102)):
+                                        elif safe_name and coord == (271, 1, -2201):
                                             new_cmd = f"function {safe_name}/cycle_night"
+                                        elif safe_name and coord == (306, 2, -2102):
+                                            new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
-                                            new_cmd = f"function {safe_name}/init_world"
+                                            new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         else:
                                             new_cmd = convert_func(orig_cmd)
                                         if new_cmd != orig_cmd:
