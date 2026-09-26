@@ -362,6 +362,174 @@ class ResourcePackGenerator:
         with open(os.path.join(rc_dir, "npc_villager.render_controllers.json"), "w", encoding="utf-8") as f:
             json.dump(rc_data, f, indent=2)
 
+        # 8. Definições de névoa customizada do Nether para The End (fogs/ e biomas do cliente)
+        fogs_dir = os.path.join(target_rp_dir, "fogs")
+        os.makedirs(fogs_dir, exist_ok=True)
+        fog_def = {
+            "format_version": "1.16.100",
+            "minecraft:fog_settings": {
+                "description": {
+                    "identifier": f"{safe_name}:nether_fog"
+                },
+                "distance": {
+                    "air": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    },
+                    "weather": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    }
+                },
+                "volumetric": {
+                    "density": {
+                        "air": {
+                            "max_density": 0.25,
+                            "uniform": True
+                        }
+                    },
+                    "media_coefficients": {
+                        "air": {
+                            "scattering": [0.25, 0.05, 0.05],
+                            "absorption": [0.1, 0.1, 0.1]
+                        }
+                    }
+                }
+            }
+        }
+        with open(os.path.join(fogs_dir, "nether_fog.json"), "w", encoding="utf-8") as f:
+            json.dump(fog_def, f, indent=2)
+
+        fog_def_simple = {
+            "format_version": "1.16.100",
+            "minecraft:fog_settings": {
+                "description": {
+                    "identifier": "nether_fog"
+                },
+                "distance": {
+                    "air": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    },
+                    "weather": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    }
+                }
+            }
+        }
+        with open(os.path.join(fogs_dir, "nether_fog_simple.json"), "w", encoding="utf-8") as f:
+            json.dump(fog_def_simple, f, indent=2)
+
+        fog_def_custom = {
+            "format_version": "1.16.100",
+            "minecraft:fog_settings": {
+                "description": {
+                    "identifier": "custom:nether_fog"
+                },
+                "distance": {
+                    "air": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    },
+                    "weather": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    }
+                }
+            }
+        }
+        with open(os.path.join(fogs_dir, "nether_fog_custom.json"), "w", encoding="utf-8") as f:
+            json.dump(fog_def_custom, f, indent=2)
+
+        fog_def_hell = {
+            "format_version": "1.16.100",
+            "minecraft:fog_settings": {
+                "description": {
+                    "identifier": "minecraft:fog_hell"
+                },
+                "distance": {
+                    "air": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    },
+                    "weather": {
+                        "fog_start": 0.0,
+                        "fog_end": 0.65,
+                        "fog_color": "#330808",
+                        "render_distance_type": "render"
+                    }
+                }
+            }
+        }
+        with open(os.path.join(fogs_dir, "fog_hell.json"), "w", encoding="utf-8") as f:
+            json.dump(fog_def_hell, f, indent=2)
+
+        biomes_dir = os.path.join(target_rp_dir, "biomes")
+        os.makedirs(biomes_dir, exist_ok=True)
+        client_biome_data = {
+            "format_version": "1.21.40",
+            "minecraft:client_biome": {
+                "description": {
+                    "identifier": "the_end"
+                },
+                "components": {
+                    "minecraft:fog_appearance": {
+                        "fog_identifier": f"{safe_name}:nether_fog"
+                    }
+                }
+            }
+        }
+        with open(os.path.join(biomes_dir, "the_end.client_biome.json"), "w", encoding="utf-8") as f:
+            json.dump(client_biome_data, f, indent=2)
+
+        client_biome_data_ns = {
+            "format_version": "1.21.40",
+            "minecraft:client_biome": {
+                "description": {
+                    "identifier": "minecraft:the_end"
+                },
+                "components": {
+                    "minecraft:fog_appearance": {
+                        "fog_identifier": f"{safe_name}:nether_fog"
+                    }
+                }
+            }
+        }
+        with open(os.path.join(biomes_dir, "minecraft_the_end.client_biome.json"), "w", encoding="utf-8") as f:
+            json.dump(client_biome_data_ns, f, indent=2)
+
+        biomes_client_legacy = {
+            "biomes": {
+                "the_end": {
+                    "fog_identifier": f"{safe_name}:nether_fog",
+                    "water_surface_color": "#330808",
+                    "inherit_from_prior_fog": False
+                },
+                "minecraft:the_end": {
+                    "fog_identifier": f"{safe_name}:nether_fog",
+                    "water_surface_color": "#330808",
+                    "inherit_from_prior_fog": False
+                }
+            }
+        }
+        with open(os.path.join(target_rp_dir, "biomes_client.json"), "w", encoding="utf-8") as f:
+            json.dump(biomes_client_legacy, f, indent=2)
+
         return {
             "header_uuid": rp_header_uuid,
             "module_uuid": rp_module_uuid,

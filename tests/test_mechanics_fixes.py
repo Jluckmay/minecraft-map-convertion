@@ -475,6 +475,81 @@ class TestMechanicsFixes(unittest.TestCase):
             shutil.rmtree(tmp_dir)
 
 
+    def test_nether_fog_resource_pack_definitions(self):
+        """Testa se o gerador de Resource Pack gera as definições de névoa e os arquivos de bioma do cliente."""
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            rp_dest = os.path.join(tmp_dir, "rp")
+            rp_src = os.path.join(tmp_dir, "src_rp")
+            os.makedirs(rp_src, exist_ok=True)
+            ResourcePackGenerator.generate(rp_src, rp_dest, "Mazescapist", "mazescapist")
+
+            # 1. Verifica arquivo fogs/nether_fog.json
+            fog_file = os.path.join(rp_dest, "fogs", "nether_fog.json")
+            self.assertTrue(os.path.exists(fog_file), "fogs/nether_fog.json não foi gerado!")
+            with open(fog_file, "r", encoding="utf-8") as f:
+                f_data = json.load(f)
+            self.assertEqual(f_data["minecraft:fog_settings"]["description"]["identifier"], "mazescapist:nether_fog")
+            air_dist = f_data["minecraft:fog_settings"]["distance"]["air"]
+            self.assertEqual(air_dist["fog_color"], "#330808")
+            self.assertEqual(air_dist["render_distance_type"], "render")
+
+            # 2. Verifica aliases
+            self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_simple.json")))
+            self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_custom.json")))
+            self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "fog_hell.json")))
+
+            # 3. Verifica arquivos de bioma
+            cb_file = os.path.join(rp_dest, "biomes", "the_end.client_biome.json")
+            self.assertTrue(os.path.exists(cb_file), "biomes/the_end.client_biome.json não foi gerado!")
+            with open(cb_file, "r", encoding="utf-8") as f:
+                cb_data = json.load(f)
+            self.assertEqual(cb_data["minecraft:client_biome"]["components"]["minecraft:fog_appearance"]["fog_identifier"], "mazescapist:nether_fog")
+
+            legacy_b = os.path.join(rp_dest, "biomes_client.json")
+            self.assertTrue(os.path.exists(legacy_b), "biomes_client.json não foi gerado!")
+            with open(legacy_b, "r", encoding="utf-8") as f:
+                lb_data = json.load(f)
+            self.assertIn("the_end", lb_data["biomes"])
+            self.assertEqual(lb_data["biomes"]["the_end"]["fog_identifier"], "mazescapist:nether_fog")
+        finally:
+            shutil.rmtree(tmp_dir)
+
+    def test_teleport_fog_command_ordering(self):
+        """Testa se o comando de fog e a tag são inseridos ANTES do teleporte em teleport_to_area_1."""
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            dp_dir = os.path.join(tmp_dir, "datapacks", "TestDP", "data", "custom", "functions")
+            os.makedirs(dp_dir, exist_ok=True)
+            tf = os.path.join(dp_dir, "teleport_to_area_1.mcfunction")
+            with open(tf, "w", encoding="utf-8") as f:
+                f.write("execute if block 214 42 -2214 minecraft:redstone_block run execute as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run execute in minecraft:the_nether run tp -37 138 -202\n")
+
+            bp_dest = os.path.join(tmp_dir, "bp")
+            os.makedirs(bp_dest, exist_ok=True)
+            BehaviorPackGenerator.generate(os.path.join(tmp_dir, "datapacks"), bp_dest, "Mazescapist", "mazescapist", "dummy-rp-uuid")
+
+            out_func = os.path.join(bp_dest, "functions", "teleport_to_area_1.mcfunction")
+            self.assertTrue(os.path.exists(out_func))
+            with open(out_func, "r", encoding="utf-8") as f:
+                lines = [l.strip() for l in f.readlines() if l.strip()]
+
+            # Deve haver 3 linhas: fog push, tag add, e in the_end run tp
+            self.assertEqual(len(lines), 3)
+            self.assertIn("fog @s push mazescapist:nether_fog nether_fog", lines[0])
+            self.assertIn("tag @s add in_nether_sector", lines[1])
+            self.assertIn("in the_end run tp @s -37 138 -202", lines[2])
+
+            # Verifica tick.mcfunction para gerenciamento de névoa e tags
+            tick_func = os.path.join(bp_dest, "functions", "tick.mcfunction")
+            with open(tick_func, "r", encoding="utf-8") as f:
+                tick_txt = f.read()
+            self.assertIn("execute in the_end as @a[tag=!in_nether_sector] run fog @s push mazescapist:nether_fog nether_fog", tick_txt)
+            self.assertIn("execute in overworld as @a[tag=in_nether_sector] run fog @s remove nether_fog", tick_txt)
+        finally:
+            shutil.rmtree(tmp_dir)
+
+
 if __name__ == "__main__":
     unittest.main()
 

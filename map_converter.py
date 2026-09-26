@@ -1331,12 +1331,15 @@ class MapConverterApp:
                                 if trades:
                                     self._create_npc_files(slug, disp_n, prof_n, biome_n, trades)
 
-                    conv_lines = [DatapackConverter.convert_command(l, self.known_npcs, self.safe_name) for l in raw_lines]
-                    if "teleport_to_area_1" in fn:
-                        conv_lines.append("execute if block 214 42 -2214 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
-                        conv_lines.append("execute if block 218 42 -2214 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
-                        conv_lines.append("execute if block 216 42 -2206 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
-                        conv_lines.append("execute if block 218 42 -2206 minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push minecraft:fog_hell nether_fog")
+                    conv_lines = []
+                    for l in raw_lines:
+                        if "teleport_to_area_1" in fn:
+                            for coord in ("214 42 -2214", "218 42 -2214", "216 42 -2206", "218 42 -2206"):
+                                if coord in l:
+                                    conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {self.safe_name}:nether_fog nether_fog")
+                                    conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add in_nether_sector")
+                                    break
+                        conv_lines.append(DatapackConverter.convert_command(l, self.known_npcs, self.safe_name))
                     if "a_tp_spawn" in fn:
                         conv_lines.insert(0, f"execute if score #world world_init matches 0 run function {self.safe_name}/init_world")
                     with open(dest_path, "w", encoding="utf-8") as f:
@@ -1357,6 +1360,174 @@ class MapConverterApp:
 
             # Gera a definição nativa de minecraft:villager_v2 com component groups e eventos dos NPCs
             BehaviorPackGenerator.generate_villager_v2(self.bp_dir, self.safe_name)
+
+            # Definições de névoa customizada do Nether para The End (fogs/ e biomas do cliente)
+            fogs_dir = os.path.join(self.rp_dir, "fogs")
+            os.makedirs(fogs_dir, exist_ok=True)
+            fog_def = {
+                "format_version": "1.16.100",
+                "minecraft:fog_settings": {
+                    "description": {
+                        "identifier": f"{self.safe_name}:nether_fog"
+                    },
+                    "distance": {
+                        "air": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        },
+                        "weather": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        }
+                    },
+                    "volumetric": {
+                        "density": {
+                            "air": {
+                                "max_density": 0.25,
+                                "uniform": True
+                            }
+                        },
+                        "media_coefficients": {
+                            "air": {
+                                "scattering": [0.25, 0.05, 0.05],
+                                "absorption": [0.1, 0.1, 0.1]
+                            }
+                        }
+                    }
+                }
+            }
+            with open(os.path.join(fogs_dir, "nether_fog.json"), "w", encoding="utf-8") as f:
+                json.dump(fog_def, f, indent=2)
+
+            fog_def_simple = {
+                "format_version": "1.16.100",
+                "minecraft:fog_settings": {
+                    "description": {
+                        "identifier": "nether_fog"
+                    },
+                    "distance": {
+                        "air": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        },
+                        "weather": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        }
+                    }
+                }
+            }
+            with open(os.path.join(fogs_dir, "nether_fog_simple.json"), "w", encoding="utf-8") as f:
+                json.dump(fog_def_simple, f, indent=2)
+
+            fog_def_custom = {
+                "format_version": "1.16.100",
+                "minecraft:fog_settings": {
+                    "description": {
+                        "identifier": "custom:nether_fog"
+                    },
+                    "distance": {
+                        "air": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        },
+                        "weather": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        }
+                    }
+                }
+            }
+            with open(os.path.join(fogs_dir, "nether_fog_custom.json"), "w", encoding="utf-8") as f:
+                json.dump(fog_def_custom, f, indent=2)
+
+            fog_def_hell = {
+                "format_version": "1.16.100",
+                "minecraft:fog_settings": {
+                    "description": {
+                        "identifier": "minecraft:fog_hell"
+                    },
+                    "distance": {
+                        "air": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        },
+                        "weather": {
+                            "fog_start": 0.0,
+                            "fog_end": 0.65,
+                            "fog_color": "#330808",
+                            "render_distance_type": "render"
+                        }
+                    }
+                }
+            }
+            with open(os.path.join(fogs_dir, "fog_hell.json"), "w", encoding="utf-8") as f:
+                json.dump(fog_def_hell, f, indent=2)
+
+            biomes_dir = os.path.join(self.rp_dir, "biomes")
+            os.makedirs(biomes_dir, exist_ok=True)
+            client_biome_data = {
+                "format_version": "1.21.40",
+                "minecraft:client_biome": {
+                    "description": {
+                        "identifier": "the_end"
+                    },
+                    "components": {
+                        "minecraft:fog_appearance": {
+                            "fog_identifier": f"{self.safe_name}:nether_fog"
+                        }
+                    }
+                }
+            }
+            with open(os.path.join(biomes_dir, "the_end.client_biome.json"), "w", encoding="utf-8") as f:
+                json.dump(client_biome_data, f, indent=2)
+
+            client_biome_data_ns = {
+                "format_version": "1.21.40",
+                "minecraft:client_biome": {
+                    "description": {
+                        "identifier": "minecraft:the_end"
+                    },
+                    "components": {
+                        "minecraft:fog_appearance": {
+                            "fog_identifier": f"{self.safe_name}:nether_fog"
+                        }
+                    }
+                }
+            }
+            with open(os.path.join(biomes_dir, "minecraft_the_end.client_biome.json"), "w", encoding="utf-8") as f:
+                json.dump(client_biome_data_ns, f, indent=2)
+
+            biomes_client_legacy = {
+                "biomes": {
+                    "the_end": {
+                        "fog_identifier": f"{self.safe_name}:nether_fog",
+                        "water_surface_color": "#330808",
+                        "inherit_from_prior_fog": False
+                    },
+                    "minecraft:the_end": {
+                        "fog_identifier": f"{self.safe_name}:nether_fog",
+                        "water_surface_color": "#330808",
+                        "inherit_from_prior_fog": False
+                    }
+                }
+            }
+            with open(os.path.join(self.rp_dir, "biomes_client.json"), "w", encoding="utf-8") as f:
+                json.dump(biomes_client_legacy, f, indent=2)
 
     def _create_npc_files(self, key: str, display_name: str, profession: str, biome: str, trades: list):
         trade_dir = os.path.join(self.bp_dir, "trading")
@@ -1770,6 +1941,8 @@ class MapConverterApp:
             "setblock 287 100 -2168 daylight_detector_inverted",
             "setblock 286 1 -2168 redstone_block",
             "scoreboard players set #world world_init 1",
+            "execute in overworld run fog @a remove nether_fog",
+            "tag @a remove in_nether_sector",
             f'tellraw @a {{"rawtext":[{{"text":"§a[{self.world_name}]§r World successfully initialized for Bedrock 1.21+!"}}]}}'
         ]
         init_content = "\n".join(init_lines) + "\n"
@@ -1789,6 +1962,8 @@ class MapConverterApp:
             "execute unless score DAY_COUNTER dayCounter matches 1.. run scoreboard players set DAY_COUNTER dayCounter 1",
             "scoreboard players add @s dayCounter 0",
             "scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
+            "execute in overworld run fog @s remove nether_fog",
+            "tag @s remove in_nether_sector",
             f"execute if score #world world_init matches 0 run function {self.safe_name}/init_world",
             f'tellraw @s {{"rawtext":[{{"text":"§a[{self.world_name}]§r Welcome to the Maze! Day counter and world mechanics are active."}}]}}'
         ]
@@ -1826,8 +2001,13 @@ class MapConverterApp:
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {self.safe_name}/player_join",
+            f"# 4. Gerenciamento dinamico de nevoa customizada do Nether no The End",
+            f"execute in the_end as @a[tag=!in_nether_sector] run fog @s push {self.safe_name}:nether_fog nether_fog",
+            f"execute in the_end as @a[tag=!in_nether_sector] run tag @s add in_nether_sector",
+            f"execute in overworld as @a[tag=in_nether_sector] run fog @s remove nether_fog",
+            f"execute in overworld as @a[tag=in_nether_sector] run tag @s remove in_nether_sector",
             "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog",
-            f"# 4. Manutencao dos detectores de ciclo dia/noite",
+            f"# 5. Manutencao dos detectores de ciclo dia/noite",
             "execute if score #world world_init matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute if score #world world_init matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",
             f"# 5. Detector de noite (pôr do sol / /time set 13000+ / celestial darkness)",
