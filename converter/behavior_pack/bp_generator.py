@@ -803,6 +803,20 @@ class BehaviorPackGenerator:
             with open(os.path.join(d, "player_join.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(player_join_content)
 
+        # 4c-bis. Retorno do Nether (The End) → Overworld com limpeza de névoa
+        return_from_nether_lines = [
+            f"# {world_name} — Retorno do Nether (The End) para o Overworld",
+            "# Remove a nevoa do Nether antes de teletransportar para evitar que a nevoa persista no Overworld",
+            "fog @s remove nether_fog",
+            "fog @s remove nether_fog_vanilla",
+            "tag @s remove in_nether_sector",
+            "execute in overworld run tp @s 224 44 -2210",
+        ]
+        return_from_nether_content = "\n".join(return_from_nether_lines) + "\n"
+        for d in (world_func_dir, func_dir, custom_func_dir):
+            with open(os.path.join(d, "return_from_nether.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(return_from_nether_content)
+
         # 4d. Driver de Ticks Contínuo (Daylight Detector State Machine + Sincronização)
         tick_lines = [
             f"# 1. Ticking areas permanentes (98 chunks no total, limite Bedrock 100 chunks)",

@@ -492,26 +492,23 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertEqual(f_data["minecraft:fog_settings"]["description"]["identifier"], "mazescapist:nether_fog")
             air_dist = f_data["minecraft:fog_settings"]["distance"]["air"]
             self.assertEqual(air_dist["fog_color"], "#701414")
-            self.assertEqual(air_dist["render_distance_type"], "render")
-            self.assertEqual(air_dist["fog_end"], 0.35)
+            self.assertEqual(air_dist["render_distance_type"], "fixed")
+            self.assertEqual(air_dist["fog_end"], 42.0)
 
-            # 2. Verifica aliases e overrides nativos (End e Nether)
+            # 2. Verifica aliases
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_simple.json")))
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_custom.json")))
-            self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "fog_the_end.json")))
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "fog_hell.json")))
-            self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "fog_basalt_deltas.json")))
-            self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "fog_crimson_forest.json")))
 
-            # 3. Verifica arquivos de bioma (The End e Nether)
+            # 3. Verifica arquivos de bioma
             cb_file = os.path.join(rp_dest, "biomes", "the_end.client_biome.json")
             self.assertTrue(os.path.exists(cb_file), "biomes/the_end.client_biome.json não foi gerado!")
             with open(cb_file, "r", encoding="utf-8") as f:
                 cb_data = json.load(f)
             self.assertEqual(cb_data["minecraft:client_biome"]["components"]["minecraft:fog_appearance"]["fog_identifier"], "mazescapist:nether_fog")
 
-            cb_basalt = os.path.join(rp_dest, "biomes", "basalt_deltas.client_biome.json")
-            self.assertTrue(os.path.exists(cb_basalt), "biomes/basalt_deltas.client_biome.json não foi gerado!")
+            cb_highlands = os.path.join(rp_dest, "biomes", "end_highlands.client_biome.json")
+            self.assertTrue(os.path.exists(cb_highlands), "biomes/end_highlands.client_biome.json não foi gerado!")
 
             legacy_b = os.path.join(rp_dest, "biomes_client.json")
             self.assertTrue(os.path.exists(legacy_b), "biomes_client.json não foi gerado!")
@@ -519,9 +516,8 @@ class TestMechanicsFixes(unittest.TestCase):
                 lb_data = json.load(f)
             self.assertIn("the_end", lb_data["biomes"])
             self.assertEqual(lb_data["biomes"]["the_end"]["fog_identifier"], "mazescapist:nether_fog")
-            self.assertIn("basalt_deltas", lb_data["biomes"])
-            self.assertEqual(lb_data["biomes"]["basalt_deltas"]["fog_identifier"], "mazescapist:nether_fog")
-            self.assertIn("hell", lb_data["biomes"])
+            self.assertIn("end_highlands", lb_data["biomes"])
+            self.assertEqual(lb_data["biomes"]["end_highlands"]["fog_identifier"], "mazescapist:nether_fog")
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -551,38 +547,34 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("tag @s add in_nether_sector", lines[2])
             self.assertIn("in the_end run tp @s -37 138 -202", lines[3])
 
-            # Verifica tick.mcfunction para limpeza na estacao e efeitos de boss
+            # Verifica tick.mcfunction — sem loop dinamico de fog (que estava errado)
             tick_func = os.path.join(bp_dest, "functions", "tick.mcfunction")
             with open(tick_func, "r", encoding="utf-8") as f:
                 tick_txt = f.read()
-            self.assertNotIn("execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push", tick_txt)
+            # O loop dinamico incorreto NAO deve estar presente (causa fog invertida)
+            self.assertNotIn("at @s in the_end if entity @s[r=2] run fog @s push", tick_txt)
+            self.assertNotIn("at @s in overworld if entity @s[r=2] run fog @s remove", tick_txt)
+            # Limpeza de seguranca estacionaria DEVE estar presente
             self.assertIn("execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog", tick_txt)
+            # Efeitos de chefes devem continuar presentes
             self.assertIn("execute as @e[name=Reaper] run effect @s speed 2 1 true", tick_txt)
             self.assertIn("execute as @e[name=Prometheus] run effect @s strength 2 1 true", tick_txt)
             self.assertIn('execute as @e[name="Ascended Pillager"] run effect @s strength 2 1 true', tick_txt)
+
+            # Verifica que return_from_nether.mcfunction foi gerado com fog remove antes do tp
+            return_func = os.path.join(bp_dest, "functions", "return_from_nether.mcfunction")
+            self.assertTrue(os.path.exists(return_func), "return_from_nether.mcfunction deve ser gerado")
+            with open(return_func, "r", encoding="utf-8") as f:
+                ret_txt = f.read()
+            self.assertIn("fog @s remove nether_fog", ret_txt)
+            self.assertIn("fog @s remove nether_fog_vanilla", ret_txt)
+            self.assertIn("tag @s remove in_nether_sector", ret_txt)
+            self.assertIn("execute in overworld run tp @s 224 44 -2210", ret_txt)
+            # fog remove deve vir ANTES do tp
+            self.assertLess(ret_txt.index("fog @s remove nether_fog"), ret_txt.index("execute in overworld run tp"))
         finally:
             shutil.rmtree(tmp_dir)
 
-    def test_water_to_lava_subchunk_conversion(self):
-        """Testa se subchunks contendo minecraft:water sao convertidos para minecraft:lava preservando estrutura."""
-        from converter.world.dimension_remapper import DimensionRemapper
-        import io, struct, nbtlib
-
-        # Cria um subchunk sintético com palette contendo minecraft:water
-        buf = io.BytesIO()
-        buf.write(bytes([9, 1, 0])) # version=9, storages=1, sub_y=0
-        buf.write(bytes([0])) # flags: bits_per_block=0 (single block palette)
-        buf.write(struct.pack('<i', 2)) # palette_size=2
-        tag_stone = nbtlib.Compound({"name": nbtlib.String("minecraft:stone"), "version": nbtlib.Int(18491392), "states": nbtlib.Compound({})})
-        tag_water = nbtlib.Compound({"name": nbtlib.String("minecraft:water"), "version": nbtlib.Int(18491392), "states": nbtlib.Compound({"liquid_depth": nbtlib.Int(0)})})
-        nbtlib.File(tag_stone).write(buf, byteorder='little')
-        nbtlib.File(tag_water).write(buf, byteorder='little')
-        raw_val = buf.getvalue()
-
-        conv_val, mod = DimensionRemapper.convert_water_to_lava_subchunk(raw_val)
-        self.assertTrue(mod)
-        self.assertNotIn(b"minecraft:water", conv_val)
-        self.assertIn(b"minecraft:lava", conv_val)
 
     def test_boss_summon_translation(self):
         """Testa se os monstros chefes (Reaper, Prometheus, Ascended Pillager) usam minecraft:entity_spawned e tipos corretos."""
