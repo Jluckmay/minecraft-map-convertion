@@ -101,13 +101,11 @@ def main():
     )
     print(f"    [OK] Total de blocos de comando convertidos e atualizados no LevelDB: {modified_cbs}")
 
-    # Remapeamento estrutural do Nether para The End (suporte a Y=256) e conversão de água para lava
+    # Remapeamento estrutural do Nether para The End (limite de 256 blocos do End vs 128 do Nether)
     print("    -> Remapeando estruturas e chunks do Nether para The End (suporte a Y=256)...")
     from converter.world.dimension_remapper import DimensionRemapper
     remap_res = DimensionRemapper.remap_nether_to_end(db_dir)
-    extra_water = DimensionRemapper.convert_water_to_lava(db_dir, target_dim=2)
-    total_water = remap_res.get('converted_water_subchunks', 0) + extra_water
-    print(f"    [OK] Remapeamento Nether -> The End: {remap_res['remapped_keys']} chaves migradas, {remap_res['updated_command_blocks']} blocos de comando atualizados, {total_water} subchunks de água convertidos para lava.")
+    print(f"    [OK] Remapeamento Nether -> The End: {remap_res['remapped_keys']} chaves e estruturas migradas, {remap_res['updated_command_blocks']} blocos de comando atualizados.")
 
     # Injeção in-place de ticking areas estratégicas no LevelDB
     print("    -> Injetando ticking areas estratégicas permanentes no LevelDB...")

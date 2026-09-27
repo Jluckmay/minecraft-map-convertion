@@ -803,20 +803,6 @@ class BehaviorPackGenerator:
             with open(os.path.join(d, "player_join.mcfunction"), "w", encoding="utf-8") as f:
                 f.write(player_join_content)
 
-        # 4c-bis. Retorno do Nether (The End) → Overworld com limpeza de névoa
-        return_from_nether_lines = [
-            f"# {world_name} — Retorno do Nether (The End) para o Overworld",
-            "# Remove a nevoa do Nether antes de teletransportar para evitar que a nevoa persista no Overworld",
-            "fog @s remove nether_fog",
-            "fog @s remove nether_fog_vanilla",
-            "tag @s remove in_nether_sector",
-            "execute in overworld run tp @s 224 44 -2210",
-        ]
-        return_from_nether_content = "\n".join(return_from_nether_lines) + "\n"
-        for d in (world_func_dir, func_dir, custom_func_dir):
-            with open(os.path.join(d, "return_from_nether.mcfunction"), "w", encoding="utf-8") as f:
-                f.write(return_from_nether_content)
-
         # 4d. Driver de Ticks Contínuo (Daylight Detector State Machine + Sincronização)
         tick_lines = [
             f"# 1. Ticking areas permanentes (98 chunks no total, limite Bedrock 100 chunks)",
@@ -846,10 +832,16 @@ class BehaviorPackGenerator:
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {safe_name}/player_join",
-            f"# 4. Limpeza de seguranca de nevoa ao retornar para a estacao do Overworld (224 44 -2210)",
-            "execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog",
-            "execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog_vanilla",
-            "execute in overworld run tag @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove in_nether_sector",
+            f"# 4. Gerenciamento dinamico de nevoa customizada do Nether no The End",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push minecraft:fog_crimson_forest nether_fog_vanilla",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push {safe_name}:nether_fog nether_fog",
+            f"execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run tag @s add in_nether_sector",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run fog @s remove nether_fog",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run fog @s remove nether_fog_vanilla",
+            f"execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run tag @s remove in_nether_sector",
+            "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog",
+            "execute in overworld run fog @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove nether_fog_vanilla",
+            "execute in overworld run tag @a[x=215,y=40,z=-2220,dx=20,dy=20,dz=20] remove in_nether_sector",
             f"# Manutencao de atributos e efeitos de combate para chefes (Reaper, Prometheus, Ascended Pillager)",
             "execute as @e[name=Reaper] run effect @s speed 2 1 true",
             "execute as @e[name=Reaper] run effect @s resistance 2 2 true",

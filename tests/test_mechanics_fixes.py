@@ -547,34 +547,17 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("tag @s add in_nether_sector", lines[2])
             self.assertIn("in the_end run tp @s -37 138 -202", lines[3])
 
-            # Verifica tick.mcfunction — sem loop dinamico de fog (que estava errado)
+            # Verifica tick.mcfunction para gerenciamento de névoa e tags
             tick_func = os.path.join(bp_dest, "functions", "tick.mcfunction")
             with open(tick_func, "r", encoding="utf-8") as f:
                 tick_txt = f.read()
-            # O loop dinamico incorreto NAO deve estar presente (causa fog invertida)
-            self.assertNotIn("at @s in the_end if entity @s[r=2] run fog @s push", tick_txt)
-            self.assertNotIn("at @s in overworld if entity @s[r=2] run fog @s remove", tick_txt)
-            # Limpeza de seguranca estacionaria DEVE estar presente
-            self.assertIn("execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog", tick_txt)
-            # Efeitos de chefes devem continuar presentes
+            self.assertIn("execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push mazescapist:nether_fog nether_fog", tick_txt)
+            self.assertIn("execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run fog @s remove nether_fog", tick_txt)
             self.assertIn("execute as @e[name=Reaper] run effect @s speed 2 1 true", tick_txt)
             self.assertIn("execute as @e[name=Prometheus] run effect @s strength 2 1 true", tick_txt)
             self.assertIn('execute as @e[name="Ascended Pillager"] run effect @s strength 2 1 true', tick_txt)
-
-            # Verifica que return_from_nether.mcfunction foi gerado com fog remove antes do tp
-            return_func = os.path.join(bp_dest, "functions", "return_from_nether.mcfunction")
-            self.assertTrue(os.path.exists(return_func), "return_from_nether.mcfunction deve ser gerado")
-            with open(return_func, "r", encoding="utf-8") as f:
-                ret_txt = f.read()
-            self.assertIn("fog @s remove nether_fog", ret_txt)
-            self.assertIn("fog @s remove nether_fog_vanilla", ret_txt)
-            self.assertIn("tag @s remove in_nether_sector", ret_txt)
-            self.assertIn("execute in overworld run tp @s 224 44 -2210", ret_txt)
-            # fog remove deve vir ANTES do tp
-            self.assertLess(ret_txt.index("fog @s remove nether_fog"), ret_txt.index("execute in overworld run tp"))
         finally:
             shutil.rmtree(tmp_dir)
-
 
     def test_boss_summon_translation(self):
         """Testa se os monstros chefes (Reaper, Prometheus, Ascended Pillager) usam minecraft:entity_spawned e tipos corretos."""
