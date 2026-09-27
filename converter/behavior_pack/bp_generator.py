@@ -448,15 +448,14 @@ class BehaviorPackGenerator:
                             trans = CommandTranslator.translate(line_s, known_npcs, safe_name)
                             if "teleport_to_area_1" in fname:
                                 sector_fogs = {
-                                    "214 42 -2214": "minecraft:fog_basalt_deltas",
-                                    "218 42 -2214": "minecraft:fog_hell",
-                                    "216 42 -2206": "minecraft:fog_warped_forest",
-                                    "218 42 -2206": "minecraft:fog_crimson_forest",
+                                    "214 42 -2214": f"{safe_name}:fog_basalt_deltas",
+                                    "218 42 -2214": f"{safe_name}:fog_hell",
+                                    "216 42 -2206": f"{safe_name}:fog_warped_forest",
+                                    "218 42 -2206": f"{safe_name}:nether_fog",
                                 }
                                 for coord, v_fog in sector_fogs.items():
                                     if coord in line_s:
-                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog_vanilla")
-                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {safe_name}:nether_fog nether_fog")
+                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog")
                                         converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add in_nether_sector")
                                         break
                             if "generates_npc" in fname:

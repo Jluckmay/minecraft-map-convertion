@@ -165,10 +165,6 @@ class CommandTranslator:
         if s.startswith('/'):
             s = s[1:].strip()
 
-        # Supressão de night_vision nos setores do Nether para preservar a renderização da névoa no RenderDragon
-        if "night_vision" in s and any(k in s for k in ("the_nether", "the_end", "-670", "-572", "nether")):
-            return "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
-
         # Correção de erros tipográficos em comandos herdados (ex: xecute -> execute)
         if s.startswith("xecute "):
             s = "execute " + s[7:].strip()
