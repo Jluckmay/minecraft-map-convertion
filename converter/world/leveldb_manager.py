@@ -240,6 +240,10 @@ class BedrockLevelDBManager:
                                             new_cmd = f"execute as {selector} run function {safe_name}/return_from_nether"
                                         else:
                                             new_cmd = convert_func(orig_cmd)
+                                        if "reaper" in new_cmd.lower() or "reaper" in orig_cmd.lower():
+                                            if tag.get("powered", 0) != 0:
+                                                tag["powered"] = nbtlib.Byte(0)
+                                                val_modified = True
                                         if new_cmd != orig_cmd:
                                             tag["Command"] = nbtlib.String(new_cmd)
                                             val_modified = True
@@ -312,6 +316,10 @@ class BedrockLevelDBManager:
                                             new_cmd = f"execute as {selector} run function {safe_name}/return_from_nether"
                                         else:
                                             new_cmd = convert_func(orig_cmd)
+                                        if "reaper" in new_cmd.lower() or "reaper" in orig_cmd.lower():
+                                            if tag.get("powered", 0) != 0:
+                                                tag["powered"] = nbtlib.Byte(0)
+                                                val_modified = True
                                         if new_cmd != orig_cmd:
                                             tag["Command"] = nbtlib.String(new_cmd)
                                             val_modified = True

@@ -502,12 +502,14 @@ class DatapackConverter:
             return f"execute unless entity @e[type={npc_type}] run {prefix}{npc_type} {x} {y} {z}"
 
         # Se for mob customizado conhecido (Prometheus, Reaper, Ascended Pillager, etc.)
-        if custom_name and clean_ent in ("wither_skeleton", "spider", "pillager", "vex"):
-            mob_slug = re.sub(r'[^a-zA-Z0-9_]', '_', custom_name.lower()).strip('_')
-            if mob_slug in ("prometheus", "reaper", "ascended_pillager"):
-                target_ns = world_safe_name or "namespace"
-                custom_mob_type = f"{target_ns}:{mob_slug}"
-                return f"{prefix}{custom_mob_type} {x} {y} {z}"
+        if custom_name and clean_ent in ("wither_skeleton", "spider", "pillager", "vex", "evoker"):
+            if clean_ent == "spider" and ("reaper" in custom_name.lower() or (nbt and "wither_skeleton" in nbt)):
+                clean_ent = "wither_skeleton"
+                custom_name = "Reaper"
+            return f"{prefix}{clean_ent} \"{custom_name}\" {x} {y} {z}"
+
+        if custom_name:
+            return f"{prefix}{clean_ent} \"{custom_name}\" {x} {y} {z}"
 
         # Invocação vanilla sem tags NBT
         return f"{prefix}{clean_ent} {x} {y} {z}"

@@ -330,8 +330,8 @@ class CommandTranslator:
                         target_entity = f"{world_safe_name}:npc_{matched_npc}"
                         return f"execute unless entity @e[type={target_entity}] run {prefix}{target_entity} {x} {y} {z}"
                     if clean_type == "villager":
-                        return f"{prefix}villager_v2 {x} {y} {z} 0 0 minecraft:entity_spawned \"{found_name}\""
-                    return f"{prefix}{clean_type} {x} {y} {z} 0 0 minecraft:entity_spawned \"{found_name}\""
+                        return f"{prefix}villager_v2 \"{found_name}\" {x} {y} {z}"
+                    return f"{prefix}{clean_type} \"{found_name}\" {x} {y} {z}"
                 if clean_type == "villager":
                     return f"{prefix}villager_v2 {x} {y} {z}"
                 return f"{prefix}{clean_type} {x} {y} {z}"

@@ -571,21 +571,49 @@ class TestMechanicsFixes(unittest.TestCase):
             shutil.rmtree(tmp_dir)
 
     def test_boss_summon_translation(self):
-        """Testa se os monstros chefes (Reaper, Prometheus, Ascended Pillager) usam minecraft:entity_spawned e tipos corretos."""
+        """Testa se os monstros chefes (Reaper, Prometheus, Ascended Pillager) usam sintaxe Bedrock limpa com nametag e tipos corretos."""
         # Reaper (Spider com passageiro Wither Skeleton no Java)
         cmd_reaper = 'execute if entity @p[distance=..50] run summon spider ~ ~10 ~0.5 {Health:150f,Tags:["rep"],Passengers:[{id:"minecraft:wither_skeleton",Health:150f,Tags:["red"],CustomName:\'{"text":"Reaper","color":"dark_red","bold":true}\'}]}'
         t_reaper = CommandTranslator.translate(cmd_reaper, world_safe_name="the_maze")
-        self.assertEqual(t_reaper, 'execute if entity @p[r=50] run summon wither_skeleton ~ ~10 ~0.5 0 0 minecraft:entity_spawned "Reaper"')
+        self.assertEqual(t_reaper, 'execute if entity @p[r=50] run summon wither_skeleton "Reaper" ~ ~10 ~0.5')
 
         # Prometheus
         cmd_prom = 'summon minecraft:wither_skeleton 12 69 -1611 {PersistenceRequired:0b,Tags:["Curse"],CustomName:\'{"text":"Prometheus","color":"gold","bold":true,"italic":true}\'}'
         t_prom = CommandTranslator.translate(cmd_prom, world_safe_name="the_maze")
-        self.assertEqual(t_prom, 'summon wither_skeleton 12 69 -1611 0 0 minecraft:entity_spawned "Prometheus"')
+        self.assertEqual(t_prom, 'summon wither_skeleton "Prometheus" 12 69 -1611')
 
         # Ascended Pillager
         cmd_pil = '/summon minecraft:evoker 1009 185 1168 {PersistenceRequired:1b,Health:200f,Tags:["evok"],CustomName:\'{"text":"Ascended Pillager","color":"gold","bold":true}\'}'
         t_pil = CommandTranslator.translate(cmd_pil, world_safe_name="the_maze")
-        self.assertEqual(t_pil, 'summon evoker 1009 185 1168 0 0 minecraft:entity_spawned "Ascended Pillager"')
+        self.assertEqual(t_pil, 'summon evoker "Ascended Pillager" 1009 185 1168')
+
+    def test_maze_boss_engine_and_tick_integration(self):
+        """Testa se maze_boss.mcfunction é gerada com os 17 setores e integrada ao tick.mcfunction com equipamentos."""
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            target_bp = os.path.join(tmp_dir, "target_bp")
+            BehaviorPackGenerator.generate("", target_bp, "MazeRunner", "mazerunner", "dummy-rp-uuid")
+
+            boss_func = os.path.join(target_bp, "functions", "mazerunner", "maze_boss.mcfunction")
+            self.assertTrue(os.path.exists(boss_func))
+            with open(boss_func, "r", encoding="utf-8") as f:
+                b_content = f.read()
+
+            self.assertIn('summon wither_skeleton "Reaper" -123.5 65 -2230.5', b_content)
+            self.assertIn('summon wither_skeleton "Reaper" 57.5 64 -2295', b_content)
+            self.assertIn('summon wither_skeleton "Reaper" 377.5 64 -1984', b_content)
+            self.assertIn('mob.wither.spawn', b_content)
+
+            tick_func = os.path.join(target_bp, "functions", "tick.mcfunction")
+            with open(tick_func, "r", encoding="utf-8") as f:
+                t_content = f.read()
+
+            self.assertIn("reaper_clock", t_content)
+            self.assertIn("maze_boss", t_content)
+            self.assertIn("iron_hoe", t_content)
+            self.assertIn("iron_chestplate", t_content)
+        finally:
+            shutil.rmtree(tmp_dir)
 
     def test_spawner_preservation_translation(self):
         """Testa se o comando data merge block {Delay:0} não destrói spawners customizados com setblock mob_spawner."""
