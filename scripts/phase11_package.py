@@ -50,24 +50,53 @@ def main():
     bp_dir = os.path.join(OUTPUT_DIR, "behavior_pack")
     world_dir = os.path.join(OUTPUT_DIR, "converted_world")
 
-    final_rp = os.path.join(OUTPUT_DIR, "converted_resource_pack.mcpack")
-    final_bp = os.path.join(OUTPUT_DIR, "converted_behavior_pack.mcpack")
-    final_world = os.path.join(OUTPUT_DIR, "converted_map.mcworld")
-    final_addon = os.path.join(OUTPUT_DIR, "converted_map.mcaddon")
+    # Auto-detecta o nome do mundo a partir do analysis/world_structure.json
+    analysis_file = os.path.join(BASE_DIR, "analysis", "world_structure.json")
+    world_name = "Mazescapist"
+    if os.path.exists(analysis_file):
+        try:
+            with open(analysis_file, "r", encoding="utf-8") as f:
+                w_struct = json.load(f)
+                raw_n = w_struct.get("level_info", {}).get("LevelName", "Mazescapist")
+                import re
+                clean_n = re.sub(r'§.', '', raw_n).strip()
+                if clean_n:
+                    world_name = clean_n
+        except Exception:
+            pass
 
-    print("[*] Empacotando Resource Pack (.mcpack)...")
+    # Limpeza de arquivos de compilações antigas/obsoletas para evitar duplicatas
+    stale_files = [
+        os.path.join(OUTPUT_DIR, "converted_resource_pack.mcpack"),
+        os.path.join(OUTPUT_DIR, "converted_behavior_pack.mcpack"),
+        os.path.join(OUTPUT_DIR, "converted_map.mcworld"),
+        os.path.join(OUTPUT_DIR, "converted_map.mcaddon"),
+    ]
+    for sf in stale_files:
+        if os.path.exists(sf):
+            try:
+                os.remove(sf)
+            except Exception:
+                pass
+
+    final_rp = os.path.join(OUTPUT_DIR, f"{world_name}_RP.mcpack")
+    final_bp = os.path.join(OUTPUT_DIR, f"{world_name}_BP.mcpack")
+    final_world = os.path.join(OUTPUT_DIR, f"{world_name}.mcworld")
+    final_addon = os.path.join(OUTPUT_DIR, f"{world_name}.mcaddon")
+
+    print(f"[*] Empacotando Resource Pack (.mcpack) -> {os.path.basename(final_rp)}...")
     zip_directory(rp_dir, final_rp)
     print(f"    [OK] {final_rp} ({os.path.getsize(final_rp) / 1024:.2f} KB)")
 
-    print("[*] Empacotando Behavior Pack (.mcpack)...")
+    print(f"[*] Empacotando Behavior Pack (.mcpack) -> {os.path.basename(final_bp)}...")
     zip_directory(bp_dir, final_bp)
     print(f"    [OK] {final_bp} ({os.path.getsize(final_bp) / 1024:.2f} KB)")
 
-    print("[*] Empacotando Mundo Bedrock (.mcworld)...")
+    print(f"[*] Empacotando Mundo Bedrock (.mcworld) -> {os.path.basename(final_world)}...")
     zip_directory(world_dir, final_world)
     print(f"    [OK] {final_world} ({os.path.getsize(final_world) / 1024 / 1024:.2f} MB)")
 
-    print("[*] Empacotando Pacote Unificado (.mcaddon)...")
+    print(f"[*] Empacotando Pacote Unificado (.mcaddon) -> {os.path.basename(final_addon)}...")
     build_mcaddon(bp_dir, rp_dir, final_addon)
     print(f"    [OK] {final_addon} ({os.path.getsize(final_addon) / 1024:.2f} KB)")
 
