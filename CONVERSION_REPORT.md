@@ -123,10 +123,10 @@ Unconverted / Incompatible (RED)       :     0
 
 ```text
 # Checksums SHA-256 dos artefatos finais Bedrock 1.20+
-574a19be8d1ad083ec10951df719f0ff9068bcaba74845e3efe2ab6de168328c *Mazescapist.mcworld
-261bf681df2bb42e4996ec38248e2666aef84ba1fe71f8ac28e6649e1cd4e8ba *Mazescapist.mcaddon
-0259c930a0ad302da5f8d84bb19d7f93f2ca68a51821393fcf9d284e020a32db *Mazescapist_BP.mcpack
-c1792fa02bf2ce5e9df0b8c02ee911f89310ffa5ffc7835cd95ac91970996ab4 *Mazescapist_RP.mcpack
+d8fc6e26cd968570ca79434f0269c2af07669f268fe3dd2aa10541a09cc8ace9 *Mazescapist.mcworld
+09ab92f7b54625a639db6364f81a4692a807b742ea9f2352fe47b17318f009e2 *Mazescapist.mcaddon
+11c482de4d7315495455195e82ab175ffb5307eaf382004c6da033eb20f394d5 *Mazescapist_BP.mcpack
+1e4638835b22bcd867095b7f99f11fa3555bc7a33e9d7701c86a760a50ef5170 *Mazescapist_RP.mcpack
 
 ```
 

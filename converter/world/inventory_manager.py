@@ -22,6 +22,7 @@ except ImportError:
 
 # Mapeamento de itens clássicos Java para Bedrock quando aplicável
 ITEM_MAP = {
+    "minecraft:bricks": "minecraft:brick_block",
     "minecraft:scute": "minecraft:turtle_scute",
     "minecraft:totem_of_undying": "minecraft:totem_of_undying",
     "minecraft:lead": "minecraft:lead",

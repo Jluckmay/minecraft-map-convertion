@@ -562,6 +562,18 @@ class LootTableConverter:
 class NPCTradeExtractor:
     """Extrai trocas customizadas (Recipes/Offers) de comandos /summon villager."""
 
+    JAVA_TO_BEDROCK_ITEM_MAP = {
+        "bricks": "brick_block",
+        "scute": "turtle_scute",
+        "melon": "melon_block",
+    }
+
+    @classmethod
+    def map_item_id(cls, item_name: str) -> str:
+        """Traduz identificador de item do Java para o Bedrock (ex: bricks -> brick_block)."""
+        raw = item_name.replace("minecraft:", "")
+        return cls.JAVA_TO_BEDROCK_ITEM_MAP.get(raw, raw)
+
     @staticmethod
     def parse_trades_from_command(command_str: str) -> list:
         trades = []
@@ -632,9 +644,9 @@ class NPCTradeExtractor:
 
             if buy_id_m and sell_id_m:
                 trade_entry = {
-                    "buy": buy_id_m.group(1).replace("minecraft:", ""),
+                    "buy": NPCTradeExtractor.map_item_id(buy_id_m.group(1)),
                     "buy_count": int(buy_cnt_m.group(1)) if buy_cnt_m else 1,
-                    "sell": sell_id_m.group(1).replace("minecraft:", ""),
+                    "sell": NPCTradeExtractor.map_item_id(sell_id_m.group(1)),
                     "sell_count": int(sell_cnt_m.group(1)) if sell_cnt_m else 1,
                 }
                 buyb_str = extract_tag_compound(block, "buyB")
@@ -642,7 +654,7 @@ class NPCTradeExtractor:
                     buyb_id_m = re.search(r'id\s*:\s*[\'"]?([a-zA-Z0-9:_]+)[\'"]?', buyb_str)
                     buyb_cnt_m = re.search(r'Count\s*:\s*(\d+)', buyb_str)
                     if buyb_id_m:
-                        trade_entry["buyB"] = buyb_id_m.group(1).replace("minecraft:", "")
+                        trade_entry["buyB"] = NPCTradeExtractor.map_item_id(buyb_id_m.group(1))
                         trade_entry["buyB_count"] = int(buyb_cnt_m.group(1)) if buyb_cnt_m else 1
 
                 trades.append(trade_entry)
@@ -1507,15 +1519,18 @@ class MapConverterApp:
             ]
         }
         for t in trades:
-            buy_item = f"minecraft:{t['buy']}" if not t['buy'].startswith("minecraft:") else t['buy']
-            sell_item = f"minecraft:{t['sell']}" if not t['sell'].startswith("minecraft:") else t['sell']
+            buy_name = NPCTradeExtractor.map_item_id(t['buy'])
+            sell_name = NPCTradeExtractor.map_item_id(t['sell'])
+            buy_item = f"minecraft:{buy_name}" if not buy_name.startswith("minecraft:") else buy_name
+            sell_item = f"minecraft:{sell_name}" if not sell_name.startswith("minecraft:") else sell_name
             trade_obj = {
                 "wants": [{"item": buy_item, "quantity": t["buy_count"]}],
                 "gives": [{"item": sell_item, "quantity": t["sell_count"]}],
                 "max_uses": 999999
             }
             if "buyB" in t:
-                buyb_item = f"minecraft:{t['buyB']}" if not t['buyB'].startswith("minecraft:") else t['buyB']
+                buyb_name = NPCTradeExtractor.map_item_id(t['buyB'])
+                buyb_item = f"minecraft:{buyb_name}" if not buyb_name.startswith("minecraft:") else buyb_name
                 trade_obj["wants"].append({"item": buyb_item, "quantity": t.get("buyB_count", 1)})
             tt_json["tiers"][0]["trades"].append(trade_obj)
             tt_json["tiers"][0]["groups"][0]["trades"].append(trade_obj)

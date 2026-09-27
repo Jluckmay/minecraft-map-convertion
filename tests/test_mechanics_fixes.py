@@ -601,6 +601,57 @@ class TestMechanicsFixes(unittest.TestCase):
         self.assertTrue(t_nv.startswith("#"))
         self.assertIn("suprimido", t_nv)
 
+    def test_npc_joe_trade_item_mapping(self):
+        """Testa se minecraft:bricks do Java é mapeado para minecraft:brick_block no Bedrock nas trocas do NPC Joe."""
+        joe_cmd = (
+            'execute if score DAY_COUNTER dayCounter matches 13 run summon minecraft:villager 264 59 -2184 '
+            '{Tags:["Vil"],Willing:0b,CustomName:\'{"text":"Joe"}\',VillagerData:{level:99,profession:"minecraft:fletcher",'
+            'type:"minecraft:savanna"},Offers:{Recipes:[{maxUses:2147483647,buy:{id:"minecraft:emerald",Count:1b},'
+            'sell:{id:"minecraft:coal_block",Count:2b}},{maxUses:2147483647,buy:{id:"minecraft:emerald",Count:4b},'
+            'sell:{id:"minecraft:sheep_spawn_egg",Count:1b}},{maxUses:2147483647,buy:{id:"minecraft:emerald",Count:1b},'
+            'sell:{id:"minecraft:bricks",Count:64b}},{maxUses:2147483647,buy:{id:"minecraft:emerald",Count:1b},'
+            'sell:{id:"minecraft:string",Count:1b}}]}}'
+        )
+        # Teste de extração via BehaviorPackGenerator
+        bp_trades = BehaviorPackGenerator.extract_trades_from_command(joe_cmd)
+        self.assertEqual(len(bp_trades), 4)
+        self.assertEqual(bp_trades[2]["gives"][0]["item"], "brick_block")
+        self.assertEqual(bp_trades[2]["gives"][0]["quantity"], 64)
+
+        # Teste de extração via NPCTradeExtractor
+        from map_converter import NPCTradeExtractor
+        npc_trades = NPCTradeExtractor.parse_trades_from_command(joe_cmd)
+        self.assertEqual(len(npc_trades), 4)
+        self.assertEqual(npc_trades[2]["sell"], "brick_block")
+        self.assertEqual(npc_trades[2]["sell_count"], 64)
+
+        # Teste de geração completa do BP verificando joe_trades.json
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            dp_dir = os.path.join(tmp_dir, "datapack", "data", "custom", "functions")
+            os.makedirs(dp_dir, exist_ok=True)
+            with open(os.path.join(dp_dir, "generates_npc.mcfunction"), "w", encoding="utf-8") as f:
+                f.write(joe_cmd + "\n")
+
+            target_bp = os.path.join(tmp_dir, "target_bp")
+            BehaviorPackGenerator.generate(os.path.join(tmp_dir, "datapack"), target_bp, "TestWorld", "testworld", "dummy-rp-uuid")
+
+            joe_file = os.path.join(target_bp, "trading", "joe_trades.json")
+            self.assertTrue(os.path.exists(joe_file))
+            with open(joe_file, "r", encoding="utf-8") as jf:
+                joe_json = json.load(jf)
+
+            trade_3 = joe_json["tiers"][0]["trades"][2]
+            self.assertEqual(trade_3["gives"][0]["item"], "minecraft:brick_block")
+            self.assertEqual(trade_3["gives"][0]["quantity"], 64)
+
+            # Garante que nenhum item use 'minecraft:bricks' (inválido no Bedrock)
+            raw_text = json.dumps(joe_json)
+            self.assertNotIn('"minecraft:bricks"', raw_text)
+            self.assertIn('"minecraft:brick_block"', raw_text)
+        finally:
+            shutil.rmtree(tmp_dir)
+
 
 if __name__ == "__main__":
     unittest.main()

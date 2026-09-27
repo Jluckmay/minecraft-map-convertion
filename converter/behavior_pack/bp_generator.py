@@ -16,8 +16,20 @@ from converter.commands.translator import CommandTranslator
 class BehaviorPackGenerator:
     """Gera manifestos, funções convertidas, loot tables, NPCs e tick.json do BP Bedrock."""
 
-    @staticmethod
-    def extract_trades_from_command(cmd: str) -> List[Dict[str, Any]]:
+    JAVA_TO_BEDROCK_ITEM_MAP = {
+        "bricks": "brick_block",
+        "scute": "turtle_scute",
+        "melon": "melon_block",
+    }
+
+    @classmethod
+    def map_item_id(cls, item_name: str) -> str:
+        """Traduz identificador de item do Java para o Bedrock (ex: bricks -> brick_block)."""
+        raw = item_name.replace("minecraft:", "")
+        return cls.JAVA_TO_BEDROCK_ITEM_MAP.get(raw, raw)
+
+    @classmethod
+    def extract_trades_from_command(cls, cmd: str) -> List[Dict[str, Any]]:
         """Extrai ofertas de trocas (Recipes:[...]) de comandos /summon villager."""
         trades = []
         rec_idx = cmd.find("Recipes:[")
@@ -54,10 +66,13 @@ class BehaviorPackGenerator:
             buyB_m = re.search(r'buyB:\{id:"([^"]+)",Count:(\d+)b?\}', block)
             sell_m = re.search(r'sell:\{id:"([^"]+)",Count:(\d+)b?\}', block)
             if buy_m and sell_m:
-                wants = [{"item": buy_m.group(1).replace("minecraft:", ""), "quantity": int(buy_m.group(2))}]
+                buy_item = cls.map_item_id(buy_m.group(1))
+                wants = [{"item": buy_item, "quantity": int(buy_m.group(2))}]
                 if buyB_m:
-                    wants.append({"item": buyB_m.group(1).replace("minecraft:", ""), "quantity": int(buyB_m.group(2))})
-                gives = [{"item": sell_m.group(1).replace("minecraft:", ""), "quantity": int(sell_m.group(2))}]
+                    buyB_item = cls.map_item_id(buyB_m.group(1))
+                    wants.append({"item": buyB_item, "quantity": int(buyB_m.group(2))})
+                sell_item = cls.map_item_id(sell_m.group(1))
+                gives = [{"item": sell_item, "quantity": int(sell_m.group(2))}]
                 trades.append({
                     "wants": wants,
                     "gives": gives,
@@ -331,14 +346,14 @@ class BehaviorPackGenerator:
                                             ft = {
                                                 "wants": [
                                                     {
-                                                        "item": f"minecraft:{w['item'].replace('minecraft:', '')}",
+                                                        "item": f"minecraft:{cls.map_item_id(w['item'])}",
                                                         "quantity": w["quantity"]
                                                     }
                                                     for w in tr.get("wants", [])
                                                 ],
                                                 "gives": [
                                                     {
-                                                        "item": f"minecraft:{g['item'].replace('minecraft:', '')}",
+                                                        "item": f"minecraft:{cls.map_item_id(g['item'])}",
                                                         "quantity": g["quantity"]
                                                     }
                                                     for g in tr.get("gives", [])
