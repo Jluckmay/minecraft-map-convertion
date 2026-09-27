@@ -12,7 +12,7 @@ import os
 import struct
 import io
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 import nbtlib
 
 
@@ -20,10 +20,94 @@ class DimensionRemapper:
     """Remapeia chaves do LevelDB de uma dimensão para outra e atualiza blocos de comando correspondentes."""
 
     @classmethod
+    def convert_water_to_lava_subchunk(cls, val: bytes) -> Tuple[bytes, bool]:
+        """Substitui entradas de minecraft:water e minecraft:flowing_water por lava na paleta do subchunk."""
+        if not (b"minecraft:water" in val or b"minecraft:flowing_water" in val or b"water" in val):
+            return val, False
+        try:
+            buf = io.BytesIO(val)
+            v = buf.read(1)[0]
+            sc = buf.read(1)[0]
+            header = bytearray([v, sc])
+            if v >= 9:
+                sub_y = buf.read(1)[0]
+                header.append(sub_y)
+
+            out_buf = io.BytesIO()
+            out_buf.write(header)
+            modified = False
+
+            for s in range(sc):
+                flags = buf.read(1)[0]
+                bpb = flags >> 1
+                is_runtime = flags & 1
+                bpw = 32 // bpb if bpb > 0 else 1
+                wc = (4096 + bpw - 1) // bpw if bpb > 0 else 0
+                packed_data = buf.read(wc * 4)
+                out_buf.write(bytes([flags]))
+                out_buf.write(packed_data)
+                if not is_runtime:
+                    psize = struct.unpack('<i', buf.read(4))[0]
+                    palette = []
+                    for p in range(psize):
+                        tag = nbtlib.File.from_fileobj(buf, byteorder='little')
+                        name = str(tag.get('name', ''))
+                        if name == "minecraft:water":
+                            tag['name'] = nbtlib.String("minecraft:lava")
+                            modified = True
+                        elif name == "minecraft:flowing_water":
+                            tag['name'] = nbtlib.String("minecraft:flowing_lava")
+                            modified = True
+                        palette.append(tag)
+                    out_buf.write(struct.pack('<i', psize))
+                    for tag in palette:
+                        tag.write(out_buf, byteorder='little')
+
+            rem = buf.read()
+            out_buf.write(rem)
+            if modified:
+                return out_buf.getvalue(), True
+        except Exception:
+            pass
+        return val, False
+
+    @classmethod
+    def convert_water_to_lava(cls, db_dir: str, target_dim: int = 2) -> int:
+        """Converte todas as paletas de água para lava nos subchunks da dimensão alvo."""
+        if not os.path.isdir(db_dir):
+            return 0
+        converted_count = 0
+        has_manifest = any(f.startswith("MANIFEST") or f == "CURRENT" for f in os.listdir(db_dir))
+        if has_manifest:
+            try:
+                import leveldb
+                db = leveldb.LevelDB(db_dir)
+                batch = {}
+                for k, val in db.iterate():
+                    if len(k) >= 13 and k[12] == 0x2f:
+                        dim = struct.unpack('<i', k[8:12])[0]
+                        if dim == target_dim:
+                            new_val, mod = cls.convert_water_to_lava_subchunk(val)
+                            if mod:
+                                batch[k] = new_val
+                                converted_count += 1
+                                if len(batch) >= 1000:
+                                    db.putBatch(batch)
+                                    batch.clear()
+                if batch:
+                    db.putBatch(batch)
+                    batch.clear()
+                db.close()
+                return converted_count
+            except Exception:
+                pass
+        return converted_count
+
+    @classmethod
     def remap_nether_to_end(cls, db_dir: str) -> Dict[str, Any]:
         """
         Remapeia todas as chaves da dimensão 1 (Nether) para a dimensão 2 (The End).
-        Atualiza também blocos de comando no Overworld e no End para apontar para 'the_end'.
+        Atualiza blocos de comando correspondentes e converte água em lava no Nether/End.
         """
         if not os.path.isdir(db_dir):
             raise FileNotFoundError(f"Diretório LevelDB não encontrado: {db_dir}")
@@ -42,8 +126,9 @@ class DimensionRemapper:
                         if dim == 1:
                             dim1_keys.append(k)
 
-                # 2. Remapear para dimensão 2 (The End)
+                # 2. Remapear para dimensão 2 (The End) e converter água em lava em subchunks
                 remapped_count = 0
+                converted_water_count = 0
                 batch_size = 5000
                 batch = {}
                 keys_to_delete = []
@@ -51,6 +136,10 @@ class DimensionRemapper:
                 for k in dim1_keys:
                     new_k = k[:8] + struct.pack('<i', 2) + k[12:]
                     val = db.get(k)
+                    if len(new_k) >= 13 and new_k[12] == 0x2f:
+                        val, mod = cls.convert_water_to_lava_subchunk(val)
+                        if mod:
+                            converted_water_count += 1
                     batch[new_k] = val
                     keys_to_delete.append(k)
                     remapped_count += 1
@@ -108,7 +197,8 @@ class DimensionRemapper:
                 db.close()
                 return {
                     "remapped_keys": remapped_count,
-                    "updated_command_blocks": updated_cbs
+                    "updated_command_blocks": updated_cbs,
+                    "converted_water_subchunks": converted_water_count
                 }
             except Exception:
                 pass
@@ -117,6 +207,7 @@ class DimensionRemapper:
         from converter.world.leveldb_manager import BedrockLevelDBManager
         remapped_count = 0
         updated_cbs = 0
+        converted_water_count = 0
 
         for fname in os.listdir(db_dir):
             if not fname.endswith(".ldb"):
@@ -138,6 +229,12 @@ class DimensionRemapper:
                             new_k = k[:8] + struct.pack('<i', 2) + k[12:]
                             file_modified = True
                             remapped_count += 1
+
+                        if len(new_k) >= 13 and new_k[12] == 0x2f and struct.unpack('<i', new_k[8:12])[0] == 2:
+                            new_v, mod = cls.convert_water_to_lava_subchunk(new_v)
+                            if mod:
+                                file_modified = True
+                                converted_water_count += 1
 
                         if b"CommandBlock" in new_v or b"Command" in new_v:
                             try:
@@ -181,7 +278,8 @@ class DimensionRemapper:
 
         return {
             "remapped_keys": remapped_count,
-            "updated_command_blocks": updated_cbs
+            "updated_command_blocks": updated_cbs,
+            "converted_water_subchunks": converted_water_count
         }
 
 

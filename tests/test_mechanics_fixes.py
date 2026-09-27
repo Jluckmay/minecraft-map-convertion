@@ -492,8 +492,9 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertEqual(f_data["minecraft:fog_settings"]["description"]["identifier"], "mazescapist:nether_fog")
             air_dist = f_data["minecraft:fog_settings"]["distance"]["air"]
             self.assertEqual(air_dist["fog_color"], "#701414")
-            self.assertEqual(air_dist["render_distance_type"], "fixed")
-            self.assertEqual(air_dist["fog_end"], 42.0)
+            self.assertEqual(air_dist["render_distance_type"], "render")
+            self.assertEqual(air_dist["fog_start"], 0.0)
+            self.assertEqual(air_dist["fog_end"], 0.35)
 
             # 2. Verifica aliases
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_simple.json")))
@@ -518,6 +519,8 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertEqual(lb_data["biomes"]["the_end"]["fog_identifier"], "mazescapist:nether_fog")
             self.assertIn("end_highlands", lb_data["biomes"])
             self.assertEqual(lb_data["biomes"]["end_highlands"]["fog_identifier"], "mazescapist:nether_fog")
+            self.assertIn("nether_wastes", lb_data["biomes"])
+            self.assertEqual(lb_data["biomes"]["nether_wastes"]["fog_identifier"], "mazescapist:nether_fog")
         finally:
             shutil.rmtree(tmp_dir)
 
@@ -547,12 +550,20 @@ class TestMechanicsFixes(unittest.TestCase):
             self.assertIn("tag @s add in_nether_sector", lines[2])
             self.assertIn("in the_end run tp @s -37 138 -202", lines[3])
 
+            # Verifica se return_from_nether.mcfunction foi gerada
+            ret_func = os.path.join(bp_dest, "functions", "mazescapist", "return_from_nether.mcfunction")
+            self.assertTrue(os.path.exists(ret_func))
+            with open(ret_func, "r", encoding="utf-8") as f:
+                ret_txt = f.read()
+            self.assertIn("fog @s remove nether_fog", ret_txt)
+            self.assertIn("execute in overworld run tp @s 224 44 -2210", ret_txt)
+
             # Verifica tick.mcfunction para gerenciamento de névoa e tags
             tick_func = os.path.join(bp_dest, "functions", "tick.mcfunction")
             with open(tick_func, "r", encoding="utf-8") as f:
                 tick_txt = f.read()
-            self.assertIn("execute as @a[tag=!in_nether_sector] at @s in the_end if entity @s[r=2] run fog @s push mazescapist:nether_fog nether_fog", tick_txt)
-            self.assertIn("execute as @a[tag=in_nether_sector] at @s in overworld if entity @s[r=2] run fog @s remove nether_fog", tick_txt)
+            self.assertNotIn("at @s in the_end if entity @s[r=2]", tick_txt)
+            self.assertIn("execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog", tick_txt)
             self.assertIn("execute as @e[name=Reaper] run effect @s speed 2 1 true", tick_txt)
             self.assertIn("execute as @e[name=Prometheus] run effect @s strength 2 1 true", tick_txt)
             self.assertIn('execute as @e[name="Ascended Pillager"] run effect @s strength 2 1 true', tick_txt)

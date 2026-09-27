@@ -229,6 +229,15 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif coord == (319, 1, -2160):
                                             new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
+                                        elif safe_name and "in minecraft:overworld run tp 224 44 -2210" in orig_cmd:
+                                            # Blocos de retorno do Nether (The End) para o Overworld.
+                                            # Substituir o tp direto pela funcao return_from_nether que
+                                            # remove a nevoa antes de teletransportar.
+                                            # Preservar o seletor de jogador do comando original.
+                                            import re as _re
+                                            m = _re.search(r'execute as (@a\[[^\]]+\])', orig_cmd)
+                                            selector = m.group(1) if m else "@a"
+                                            new_cmd = f"execute as {selector} run function {safe_name}/return_from_nether"
                                         else:
                                             new_cmd = convert_func(orig_cmd)
                                         if new_cmd != orig_cmd:
@@ -296,6 +305,11 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif coord == (319, 1, -2160):
                                             new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
+                                        elif safe_name and "in minecraft:overworld run tp 224 44 -2210" in orig_cmd:
+                                            import re as _re
+                                            m = _re.search(r'execute as (@a\[[^\]]+\])', orig_cmd)
+                                            selector = m.group(1) if m else "@a"
+                                            new_cmd = f"execute as {selector} run function {safe_name}/return_from_nether"
                                         else:
                                             new_cmd = convert_func(orig_cmd)
                                         if new_cmd != orig_cmd:
