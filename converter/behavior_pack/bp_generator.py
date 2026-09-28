@@ -205,8 +205,21 @@ class BehaviorPackGenerator:
                     "display_name": name,
                     "table": trade_file
                 },
-                "minecraft:movement": {"value": 0.0},
+                "minecraft:movement": {"value": 0.5},
                 "minecraft:movement.basic": {},
+                "minecraft:jump.static": {},
+                "minecraft:navigation.walk": {
+                    "can_path_over_water": True,
+                    "avoid_water": False
+                },
+                "minecraft:behavior.random_stroll": {
+                    "priority": 6,
+                    "speed_multiplier": 0.6
+                },
+                "minecraft:behavior.look_at_player": {
+                    "priority": 7,
+                    "look_distance": 8.0
+                },
                 "minecraft:damage_sensor": {
                     "triggers": [{"cause": "all", "deals_damage": False}]
                 },
@@ -438,8 +451,22 @@ class BehaviorPackGenerator:
                         "minecraft:damage_sensor": {"triggers": [{"cause": "all", "deals_damage": False}]},
                         "minecraft:type_family": {"family": ["npc", "villager", "mob"]},
                         "minecraft:collision_box": {"width": 0.6, "height": 1.9},
-                        "minecraft:movement": {"value": 0.0},
-                        "minecraft:navigation.walk": {"can_path_over_water": True},
+                        "minecraft:movement": {"value": 0.5},
+                        "minecraft:movement.basic": {},
+                        "minecraft:jump.static": {},
+                        "minecraft:navigation.walk": {
+                            "can_path_over_water": True,
+                            "avoid_water": False
+                        },
+                        "minecraft:behavior.random_stroll": {
+                            "priority": 6,
+                            "speed_multiplier": 0.6
+                        },
+                        "minecraft:behavior.look_at_player": {
+                            "priority": 7,
+                            "look_distance": 8.0
+                        },
+                        "minecraft:physics": {},
                         "minecraft:trade_table": {
                             "display_name": n_val.capitalize(),
                             "table": f"trading/{clean_id}_trades.json"
@@ -464,89 +491,90 @@ class BehaviorPackGenerator:
                 with open(os.path.join(entities_dir, f"npc_{clean_stripped}.json"), "w", encoding="utf-8") as ef:
                     json.dump(ent_data, ef, indent=2)
 
-                # Segundo passo: traduzir todas as funções e salvar em ambos os caminhos (namespaced e root)
-                for fname, lines in func_files:
-                    norm_path = fname
-                    ns = "custom"
-                    subpath = os.path.basename(fname)
-                    if "data/" in norm_path:
-                        parts = norm_path.split("data/", 1)[1].split("/")
-                        ns = parts[0]
-                        subpath = "/".join(parts[2:]) if len(parts) > 2 and parts[1] == "functions" else "/".join(parts[1:])
+        # Segundo passo: traduzir todas as funções e salvar em ambos os caminhos (namespaced e root)
+        for fname, lines in func_files:
+            norm_path = fname
+            ns = "custom"
+            subpath = os.path.basename(fname)
+            if "data/" in norm_path:
+                parts = norm_path.split("data/", 1)[1].split("/")
+                ns = parts[0]
+                subpath = "/".join(parts[2:]) if len(parts) > 2 and parts[1] == "functions" else "/".join(parts[1:])
 
-                    out_func_path = os.path.join(func_dir, ns, subpath)
-                    root_func_path = os.path.join(func_dir, os.path.basename(fname))
+            out_func_path = os.path.join(func_dir, ns, subpath)
+            root_func_path = os.path.join(func_dir, os.path.basename(fname))
 
-                    os.makedirs(os.path.dirname(out_func_path), exist_ok=True)
-                    converted_lines = []
-                    for line in lines:
-                        line_s = line.strip()
-                        if not line_s or line_s.startswith("#"):
-                            converted_lines.append(line)
-                        else:
-                            trans = CommandTranslator.translate(line_s, known_npcs, safe_name)
-                            if "teleport_to_area_1" in fname:
-                                sector_fogs = {
-                                    "214 42 -2214": "minecraft:fog_basalt_deltas",
-                                    "218 42 -2214": "minecraft:fog_hell",
-                                    "216 42 -2206": "minecraft:fog_warped_forest",
-                                    "218 42 -2206": "minecraft:fog_crimson_forest",
-                                }
-                                for coord, v_fog in sector_fogs.items():
-                                    if coord in line_s:
-                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog_vanilla")
-                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {safe_name}:nether_fog nether_fog")
-                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add in_nether_sector")
-                                        break
-                            if "generates_npc" in fname:
-                                if "tellraw @a" in trans and "matches " in trans and "unless entity" not in trans:
-                                    m_npc = re.search(r'matches\s+(\d+)', trans)
-                                    if m_npc:
-                                        day_num = int(m_npc.group(1))
-                                        day_to_npc = {
-                                            4: "bruce", 9: "boris", 13: "joe", 17: "tobias",
-                                            21: "george", 26: "erik", 31: "adam", 38: "joakim",
-                                            47: "seth", 55: "jorn"
-                                        }
-                                        npc_slug = day_to_npc.get(day_num)
-                                        if npc_slug:
-                                            trans = re.sub(r'matches\s+\d+', f'matches {day_num}.. unless entity @e[type={safe_name}:npc_{npc_slug}]', trans)
-                                elif "summon" in trans and "matches " in trans:
-                                    trans = re.sub(r'matches\s+(\d+)\b', r'matches \1..', trans)
-                                elif "setblock" in trans and "matches 55" in trans:
-                                    trans = re.sub(r'matches\s+55\b', f'matches 55.. unless entity @e[type={safe_name}:npc_jorn]', trans)
-                            converted_lines.append(trans)
-
-                    if "a_tp_spawn" in fname:
-                        converted_lines.insert(0, f"execute if score #world world_init matches 0 run function {safe_name}/init_world")
-
+            os.makedirs(os.path.dirname(out_func_path), exist_ok=True)
+            converted_lines = []
+            for line in lines:
+                line_s = line.strip()
+                if not line_s or line_s.startswith("#"):
+                    converted_lines.append(line)
+                else:
+                    trans = CommandTranslator.translate(line_s, known_npcs, safe_name)
+                    if "teleport_to_area_1" in fname:
+                        sector_fogs = {
+                            "214 42 -2214": ("minecraft:fog_basalt_deltas", "sector_basalt"),
+                            "218 42 -2214": ("minecraft:fog_hell", "sector_void"),
+                            "216 42 -2206": ("minecraft:fog_warped_forest", "sector_warped"),
+                            "218 42 -2206": ("minecraft:fog_crimson_forest", "sector_crimson"),
+                        }
+                        for coord, (v_fog, s_tag) in sector_fogs.items():
+                            if coord in line_s:
+                                converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog_vanilla")
+                                converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {safe_name}:nether_fog nether_fog")
+                                converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add in_nether_sector")
+                                converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add {s_tag}")
+                                break
                     if "generates_npc" in fname:
-                        # Reordena para que tellraw execute antes de summon
-                        # Isso garante que a mensagem execute antes de a entidade existir no mundo
-                        reordered = []
+                        if "tellraw @a" in trans and "matches " in trans and "unless entity" not in trans:
+                            m_npc = re.search(r'matches\s+(\d+)', trans)
+                            if m_npc:
+                                day_num = int(m_npc.group(1))
+                                day_to_npc = {
+                                    4: "bruce", 9: "boris", 13: "joe", 17: "tobias",
+                                    21: "george", 26: "erik", 31: "adam", 38: "joakim",
+                                    47: "seth", 55: "jorn"
+                                }
+                                npc_slug = day_to_npc.get(day_num)
+                                if npc_slug:
+                                    trans = re.sub(r'matches\s+\d+', f'matches {day_num}.. unless entity @e[type={safe_name}:npc_{npc_slug}]', trans)
+                        elif "summon" in trans and "matches " in trans:
+                            trans = re.sub(r'matches\s+(\d+)\b', r'matches \1..', trans)
+                        elif "setblock" in trans and "matches 55" in trans:
+                            trans = re.sub(r'matches\s+55\b', f'matches 55.. unless entity @e[type={safe_name}:npc_jorn]', trans)
+                    converted_lines.append(trans)
+
+            if "a_tp_spawn" in fname:
+                converted_lines.insert(0, f"execute if score #world world_init matches 0 run function {safe_name}/init_world")
+
+            if "generates_npc" in fname:
+                # Reordena para que tellraw execute antes de summon
+                # Isso garante que a mensagem execute antes de a entidade existir no mundo
+                reordered = []
+                pending_summon = None
+                for cline in converted_lines:
+                    if "summon" in cline and "matches " in cline:
+                        pending_summon = cline
+                    elif "tellraw" in cline and "matches " in cline and pending_summon:
+                        reordered.append(cline)
+                        reordered.append(pending_summon)
                         pending_summon = None
-                        for cline in converted_lines:
-                            if "summon" in cline and "matches " in cline:
-                                pending_summon = cline
-                            elif "tellraw" in cline and "matches " in cline and pending_summon:
-                                reordered.append(cline)
-                                reordered.append(pending_summon)
-                                pending_summon = None
-                            else:
-                                if pending_summon:
-                                    reordered.append(pending_summon)
-                                    pending_summon = None
-                                reordered.append(cline)
+                    else:
                         if pending_summon:
                             reordered.append(pending_summon)
-                        converted_lines = reordered
+                            pending_summon = None
+                        reordered.append(cline)
+                if pending_summon:
+                    reordered.append(pending_summon)
+                converted_lines = reordered
 
-                    content_str = "\n".join(converted_lines) + "\n"
-                    with open(out_func_path, "w", encoding="utf-8") as of:
-                        of.write(content_str)
-                    with open(root_func_path, "w", encoding="utf-8") as rf:
-                        rf.write(content_str)
-                    converted_funcs += 1
+            content_str = "\n".join(converted_lines) + "\n"
+            with open(out_func_path, "w", encoding="utf-8") as of:
+                of.write(content_str)
+            with open(root_func_path, "w", encoding="utf-8") as rf:
+                rf.write(content_str)
+            converted_funcs += 1
         # Gera a definição nativa de minecraft:villager_v2 com component groups e eventos dos NPCs
         cls.generate_villager_v2(target_bp_dir, safe_name)
 
@@ -954,6 +982,11 @@ class BehaviorPackGenerator:
             "fog @s remove nether_fog",
             "fog @s remove nether_fog_vanilla",
             "tag @s remove in_nether_sector",
+            "tag @s remove in_nether_fog",
+            "tag @s remove sector_basalt",
+            "tag @s remove sector_crimson",
+            "tag @s remove sector_warped",
+            "tag @s remove sector_void",
             "execute in overworld run tp @s 224 44 -2210",
         ]
         return_from_nether_content = "\n".join(return_from_nether_lines) + "\n"
@@ -990,7 +1023,22 @@ class BehaviorPackGenerator:
             "scoreboard players operation @a dayCounter = DAY_COUNTER dayCounter",
             "execute as @a run scoreboard players operation @s dayCounter = DAY_COUNTER dayCounter",
             f"execute as @a[tag=!joined] run function {safe_name}/player_join",
-            f"# 4. Limpeza de seguranca de nevoa ao retornar para a estacao do Overworld (224 44 -2210)",
+            f"# 4. Manutencao continua de nevoa no Nether remapeado (The End)",
+            f"execute in the_end as @a[tag=sector_basalt,tag=!in_nether_fog] run fog @s push {safe_name}:fog_basalt_deltas nether_fog",
+            f"execute in the_end as @a[tag=sector_crimson,tag=!in_nether_fog] run fog @s push {safe_name}:fog_crimson_forest nether_fog",
+            f"execute in the_end as @a[tag=sector_warped,tag=!in_nether_fog] run fog @s push {safe_name}:fog_warped_forest nether_fog",
+            f"execute in the_end as @a[tag=sector_void,tag=!in_nether_fog] run fog @s push {safe_name}:fog_hell nether_fog",
+            f"execute in the_end as @a[tag=!in_nether_fog] run fog @s push {safe_name}:nether_fog nether_fog",
+            f"execute in the_end as @a[tag=!in_nether_fog] run tag @s add in_nether_fog",
+            f"# Limpeza automatica de nevoa ao estar no Overworld",
+            "execute in overworld as @a[tag=in_nether_fog] run fog @s remove nether_fog",
+            "execute in overworld as @a[tag=in_nether_fog] run fog @s remove nether_fog_vanilla",
+            "execute in overworld as @a[tag=in_nether_fog] run tag @s remove in_nether_fog",
+            "execute in overworld as @a[tag=sector_basalt] run tag @s remove sector_basalt",
+            "execute in overworld as @a[tag=sector_crimson] run tag @s remove sector_crimson",
+            "execute in overworld as @a[tag=sector_warped] run tag @s remove sector_warped",
+            "execute in overworld as @a[tag=sector_void] run tag @s remove sector_void",
+            "execute in overworld as @a[tag=in_nether_sector] run tag @s remove in_nether_sector",
             "execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog",
             "execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog_vanilla",
             "execute in overworld run tag @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove in_nether_sector",
