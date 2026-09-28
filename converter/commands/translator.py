@@ -165,6 +165,10 @@ class CommandTranslator:
         if s.startswith('/'):
             s = s[1:].strip()
 
+        # Supressão de night_vision nos setores do Nether para preservar a renderização da névoa no RenderDragon
+        if "night_vision" in s and any(k in s for k in ("the_nether", "the_end", "-670", "-572", "nether")):
+            return "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
+
         # Correção de erros tipográficos em comandos herdados (ex: xecute -> execute)
         if s.startswith("xecute "):
             s = "execute " + s[7:].strip()
@@ -328,6 +332,8 @@ class CommandTranslator:
                     if clean_type == "villager":
                         return f"{prefix}villager_v2 \"{found_name}\" {x} {y} {z}"
                     return f"{prefix}{clean_type} \"{found_name}\" {x} {y} {z}"
+                if clean_type == "creeper" and ("powered:1" in nbt_part.replace(" ", "") or "powered:1b" in nbt_part.replace(" ", "")):
+                    return f"{prefix}creeper {x} {y} {z} 0 0 minecraft:become_charged"
                 if clean_type == "villager":
                     return f"{prefix}villager_v2 {x} {y} {z}"
                 return f"{prefix}{clean_type} {x} {y} {z}"

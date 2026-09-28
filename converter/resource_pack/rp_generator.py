@@ -366,7 +366,7 @@ class ResourcePackGenerator:
         fogs_dir = os.path.join(target_rp_dir, "fogs")
         os.makedirs(fogs_dir, exist_ok=True)
 
-        def make_fog_def(identifier: str, start: float = 6.0, end: float = 42.0, color: str = "#9e1818"):
+        def make_fog_def(identifier: str):
             return {
                 "format_version": "1.16.100",
                 "minecraft:fog_settings": {
@@ -375,16 +375,16 @@ class ResourcePackGenerator:
                     },
                     "distance": {
                         "air": {
-                            "fog_start": start,
-                            "fog_end": end,
-                            "fog_color": color,
-                            "render_distance_type": "fixed"
+                            "fog_start": 0.0,
+                            "fog_end": 0.35,
+                            "fog_color": "#701414",
+                            "render_distance_type": "render"
                         },
                         "weather": {
-                            "fog_start": start,
-                            "fog_end": end,
-                            "fog_color": color,
-                            "render_distance_type": "fixed"
+                            "fog_start": 0.0,
+                            "fog_end": 0.35,
+                            "fog_color": "#701414",
+                            "render_distance_type": "render"
                         }
                     },
                     "volumetric": {
@@ -404,20 +404,20 @@ class ResourcePackGenerator:
                 }
             }
 
-        fog_configs = {
-            "nether_fog.json": (f"{safe_name}:nether_fog", 6.0, 42.0, "#9e1818"),
-            "nether_fog_simple.json": ("nether_fog", 6.0, 42.0, "#9e1818"),
-            "nether_fog_custom.json": ("custom:nether_fog", 6.0, 42.0, "#9e1818"),
-            "fog_the_end.json": ("minecraft:fog_the_end", 6.0, 44.0, "#8c1414"),
-            "fog_hell.json": (f"{safe_name}:fog_hell", 6.0, 42.0, "#8c1414"),
-            "fog_basalt_deltas.json": (f"{safe_name}:fog_basalt_deltas", 2.0, 28.0, "#685959"),
-            "fog_crimson_forest.json": (f"{safe_name}:fog_crimson_forest", 6.0, 42.0, "#9e1818"),
-            "fog_warped_forest.json": (f"{safe_name}:fog_warped_forest", 8.0, 46.0, "#163b40"),
-            "fog_soulsand_valley.json": (f"{safe_name}:fog_soulsand_valley", 4.0, 32.0, "#1b2632"),
+        fog_files = {
+            "nether_fog.json": f"{safe_name}:nether_fog",
+            "nether_fog_simple.json": "nether_fog",
+            "nether_fog_custom.json": "custom:nether_fog",
+            "fog_the_end.json": "minecraft:fog_the_end",
+            "fog_hell.json": "minecraft:fog_hell",
+            "fog_basalt_deltas.json": "minecraft:fog_basalt_deltas",
+            "fog_crimson_forest.json": "minecraft:fog_crimson_forest",
+            "fog_warped_forest.json": "minecraft:fog_warped_forest",
+            "fog_soulsand_valley.json": "minecraft:fog_soulsand_valley",
         }
-        for fname, (ident, start, end, color) in fog_configs.items():
+        for fname, ident in fog_files.items():
             with open(os.path.join(fogs_dir, fname), "w", encoding="utf-8") as f:
-                json.dump(make_fog_def(ident, start, end, color), f, indent=2)
+                json.dump(make_fog_def(ident), f, indent=2)
 
         biomes_dir = os.path.join(target_rp_dir, "biomes")
         os.makedirs(biomes_dir, exist_ok=True)
@@ -437,9 +437,6 @@ class ResourcePackGenerator:
                         "identifier": b_name
                     },
                     "components": {
-                        "minecraft:sky_color": {
-                            "sky_color": "#380808"
-                        },
                         "minecraft:fog_appearance": {
                             "fog_identifier": f"{safe_name}:nether_fog"
                         }
@@ -457,9 +454,6 @@ class ResourcePackGenerator:
                         "identifier": f"minecraft:{b_name}"
                     },
                     "components": {
-                        "minecraft:sky_color": {
-                            "sky_color": "#380808"
-                        },
                         "minecraft:fog_appearance": {
                             "fog_identifier": f"{safe_name}:nether_fog"
                         }
@@ -471,12 +465,12 @@ class ResourcePackGenerator:
 
             biomes_dict[b_name] = {
                 "fog_identifier": f"{safe_name}:nether_fog",
-                "water_surface_color": "#8c1414",
+                "water_surface_color": "#701414",
                 "inherit_from_prior_fog": False
             }
             biomes_dict[f"minecraft:{b_name}"] = {
                 "fog_identifier": f"{safe_name}:nether_fog",
-                "water_surface_color": "#8c1414",
+                "water_surface_color": "#701414",
                 "inherit_from_prior_fog": False
             }
 

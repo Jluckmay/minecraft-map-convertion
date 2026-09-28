@@ -227,6 +227,8 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        elif coord == (319, 1, -2160):
+                                            new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
                                         elif safe_name and "in minecraft:overworld run tp 224 44 -2210" in orig_cmd:
                                             # Blocos de retorno do Nether (The End) para o Overworld.
                                             # Substituir o tp direto pela funcao return_from_nether que
@@ -305,6 +307,8 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        elif coord == (319, 1, -2160):
+                                            new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
                                         elif safe_name and "in minecraft:overworld run tp 224 44 -2210" in orig_cmd:
                                             import re as _re
                                             m = _re.search(r'execute as (@a\[[^\]]+\])', orig_cmd)

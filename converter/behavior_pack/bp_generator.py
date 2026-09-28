@@ -62,17 +62,24 @@ class BehaviorPackGenerator:
                     recipe_blocks.append(raw_recipes[b_start:i+1])
 
         for block in recipe_blocks:
-            buy_m = re.search(r'buy:\{id:"([^"]+)",Count:(\d+)b?\}', block)
-            buyB_m = re.search(r'buyB:\{id:"([^"]+)",Count:(\d+)b?\}', block)
-            sell_m = re.search(r'sell:\{id:"([^"]+)",Count:(\d+)b?\}', block)
-            if buy_m and sell_m:
-                buy_item = cls.map_item_id(buy_m.group(1))
-                wants = [{"item": buy_item, "quantity": int(buy_m.group(2))}]
-                if buyB_m:
-                    buyB_item = cls.map_item_id(buyB_m.group(1))
-                    wants.append({"item": buyB_item, "quantity": int(buyB_m.group(2))})
-                sell_item = cls.map_item_id(sell_m.group(1))
-                gives = [{"item": sell_item, "quantity": int(sell_m.group(2))}]
+            buy_id_m = re.search(r'buy:\{[^}]*?id:[\'"]([^\'"]+)[\'"]', block)
+            buy_cnt_m = re.search(r'buy:\{[^}]*?Count:(\d+)b?', block)
+            buyB_id_m = re.search(r'buyB:\{[^}]*?id:[\'"]([^\'"]+)[\'"]', block)
+            buyB_cnt_m = re.search(r'buyB:\{[^}]*?Count:(\d+)b?', block)
+            sell_id_m = re.search(r'sell:\{[^}]*?id:[\'"]([^\'"]+)[\'"]', block)
+            sell_cnt_m = re.search(r'sell:\{[^}]*?Count:(\d+)b?', block)
+
+            if buy_id_m and sell_id_m:
+                buy_item = cls.map_item_id(buy_id_m.group(1))
+                buy_cnt = int(buy_cnt_m.group(1)) if buy_cnt_m else 1
+                wants = [{"item": buy_item, "quantity": buy_cnt}]
+                if buyB_id_m:
+                    buyB_item = cls.map_item_id(buyB_id_m.group(1))
+                    buyB_cnt = int(buyB_cnt_m.group(1)) if buyB_cnt_m else 1
+                    wants.append({"item": buyB_item, "quantity": buyB_cnt})
+                sell_item = cls.map_item_id(sell_id_m.group(1))
+                sell_cnt = int(sell_cnt_m.group(1)) if sell_cnt_m else 1
+                gives = [{"item": sell_item, "quantity": sell_cnt}]
                 trades.append({
                     "wants": wants,
                     "gives": gives,
@@ -300,11 +307,13 @@ class BehaviorPackGenerator:
         known_npcs = set()
         converted_funcs = 0
 
-        # Primeiro passo: extrair NPCs de summon
+        # Primeiro passo: extrair NPCs de summon tanto de datapacks quanto de command_blocks.json
+        npc_commands = []
+        func_files = []
+
         if os.path.isdir(datapacks_dir):
             for item in os.listdir(datapacks_dir):
                 full_p = os.path.join(datapacks_dir, item)
-                func_files = []
                 if item.endswith(".zip"):
                     try:
                         with zipfile.ZipFile(full_p, "r") as z:
@@ -324,106 +333,136 @@ class BehaviorPackGenerator:
                                     lines = fp.read().splitlines()
                                 func_files.append((rel, lines))
 
-                for fname, lines in func_files:
-                    for line in lines:
-                        line_s = line.strip()
-                        if "summon" in line_s and "villager" in line_s and "Recipes:" in line_s:
-                            name_match = re.search(r'CustomName\s*:\s*\'(?:\{.*?"text"\s*:\s*"([^"]+)".*?\}|"([^"]+)")\'', line_s)
-                            if name_match:
-                                n_val = (name_match.group(1) or name_match.group(2)).lower()
-                                clean_id = re.sub(r'[^a-zA-Z0-9_]', '_', n_val.replace("ö", "o").replace("ø", "o")).strip('_')
-                                clean_stripped = clean_id.replace("_", "")
-                                if clean_id:
-                                    known_npcs.add(clean_id)
-                                    known_npcs.add(clean_stripped)
-                                    known_npcs.add(n_val)
-                                    trades = cls.extract_trades_from_command(line_s)
-                                    if trades:
-                                        os.makedirs(trading_dir, exist_ok=True)
-                                        t_file = os.path.join(trading_dir, f"{clean_id}_trades.json")
-                                        formatted_trades = []
-                                        for tr in trades:
-                                            ft = {
-                                                "wants": [
-                                                    {
-                                                        "item": f"minecraft:{cls.map_item_id(w['item'])}",
-                                                        "quantity": w["quantity"]
-                                                    }
-                                                    for w in tr.get("wants", [])
-                                                ],
-                                                "gives": [
-                                                    {
-                                                        "item": f"minecraft:{cls.map_item_id(g['item'])}",
-                                                        "quantity": g["quantity"]
-                                                    }
-                                                    for g in tr.get("gives", [])
-                                                ],
-                                                "max_uses": tr.get("max_uses", 9999),
-                                                "trader_exp": tr.get("trader_exp", 0)
-                                            }
-                                            formatted_trades.append(ft)
-                                        trade_data = {
-                                            "tiers": [
-                                                {
-                                                    "total_exp_required": 0,
-                                                    "groups": [
-                                                        {
-                                                            "num_to_select": len(formatted_trades),
-                                                            "trades": formatted_trades
-                                                        }
-                                                    ],
-                                                    "trades": formatted_trades
-                                                }
-                                            ]
-                                        }
-                                        with open(t_file, "w", encoding="utf-8") as tf:
-                                            json.dump(trade_data, tf, indent=2)
+        # Coleta comandos de invocacao de aldeoes com ofertas dos datapacks
+        for fname, lines in func_files:
+            for line in lines:
+                line_s = line.strip()
+                if "summon" in line_s and "villager" in line_s and "Recipes:" in line_s:
+                    npc_commands.append(line_s)
 
-                                        # Cria definição de entidade customizada
-                                        os.makedirs(entities_dir, exist_ok=True)
-                                        ent_data = {
-                                            "format_version": "1.16.0",
-                                            "minecraft:entity": {
-                                                "description": {
-                                                    "identifier": f"{safe_name}:npc_{clean_id}",
-                                                    "runtime_identifier": "minecraft:villager_v2",
-                                                    "is_spawnable": True,
-                                                    "is_summonable": True
-                                                },
-                                                "components": {
-                                                    "minecraft:nameable": {
-                                                        "always_show": True,
-                                                        "allow_name_tag_renaming": False
-                                                    },
-                                                    "minecraft:health": {"value": 100, "max": 100},
-                                                    "minecraft:damage_sensor": {"triggers": [{"cause": "all", "deals_damage": False}]},
-                                                    "minecraft:type_family": {"family": ["npc", "villager", "mob"]},
-                                                    "minecraft:collision_box": {"width": 0.6, "height": 1.9},
-                                                    "minecraft:movement": {"value": 0.0},
-                                                    "minecraft:navigation.walk": {"can_path_over_water": True},
-                                                    "minecraft:trade_table": {
-                                                        "display_name": n_val.capitalize(),
-                                                        "table": f"trading/{clean_id}_trades.json"
-                                                    },
-                                                    "minecraft:economy_trade_table": {
-                                                        "display_name": n_val.capitalize(),
-                                                        "table": f"trading/{clean_id}_trades.json",
-                                                        "convert_trades_economy": False
-                                                    },
-                                                    "minecraft:interact": {
-                                                        "interactions": [{
-                                                            "on_interact": {"filters": {"test": "is_family", "subject": "other", "value": "player"}},
-                                                            "open_trading": True
-                                                        }]
-                                                    }
-                                                }
-                                            }
-                                        }
-                                        with open(os.path.join(entities_dir, f"npc_{clean_id}.json"), "w", encoding="utf-8") as ef:
-                                            json.dump(ent_data, ef, indent=2)
-                                        if clean_id != clean_stripped:
-                                            with open(os.path.join(entities_dir, f"npc_{clean_stripped}.json"), "w", encoding="utf-8") as ef:
-                                                json.dump(ent_data, ef, indent=2)
+        # Coleta tambem comandos de invocacao de aldeoes dos blocos de comando do mapa
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        cb_json_path = os.path.join(base_dir, "analysis", "command_blocks.json")
+        if os.path.exists(cb_json_path):
+            try:
+                with open(cb_json_path, "r", encoding="utf-8") as f:
+                    cb_data = json.load(f)
+                for cb in cb_data.get("command_blocks", []):
+                    cmd_str = cb.get("command", "")
+                    if "villager" in cmd_str and "Recipes:" in cmd_str:
+                        npc_commands.append(cmd_str)
+            except Exception:
+                pass
+
+        # Processa todos os NPCs e suas tabelas de trocas
+        npc_trades_map = {}
+        for line_s in npc_commands:
+            name_match = re.search(r'CustomName\s*:\s*\'(?:\{.*?"text"\s*:\s*"([^"]+)".*?\}|"([^"]+)")\'', line_s)
+            if name_match:
+                n_val = (name_match.group(1) or name_match.group(2)).lower()
+                clean_id = re.sub(r'[^a-zA-Z0-9_]', '_', n_val.replace("ö", "o").replace("ø", "o")).strip('_')
+                clean_stripped = clean_id.replace("_", "")
+                if clean_id:
+                    known_npcs.add(clean_id)
+                    known_npcs.add(clean_stripped)
+                    known_npcs.add(n_val)
+                    trades = cls.extract_trades_from_command(line_s)
+                    if trades:
+                        if clean_id not in npc_trades_map:
+                            npc_trades_map[clean_id] = {"name": n_val, "clean_stripped": clean_stripped, "trades": []}
+                        for tr in trades:
+                            if tr not in npc_trades_map[clean_id]["trades"]:
+                                npc_trades_map[clean_id]["trades"].append(tr)
+
+        os.makedirs(trading_dir, exist_ok=True)
+        os.makedirs(entities_dir, exist_ok=True)
+        for clean_id, info in npc_trades_map.items():
+            n_val = info["name"]
+            clean_stripped = info["clean_stripped"]
+            trades = info["trades"]
+            t_file = os.path.join(trading_dir, f"{clean_id}_trades.json")
+            formatted_trades = []
+            for tr in trades:
+                ft = {
+                    "wants": [
+                        {
+                            "item": f"minecraft:{cls.map_item_id(w['item'])}",
+                            "quantity": w["quantity"]
+                        }
+                        for w in tr.get("wants", [])
+                    ],
+                    "gives": [
+                        {
+                            "item": f"minecraft:{cls.map_item_id(g['item'])}",
+                            "quantity": g["quantity"]
+                        }
+                        for g in tr.get("gives", [])
+                    ],
+                    "max_uses": tr.get("max_uses", 9999),
+                    "trader_exp": tr.get("trader_exp", 0)
+                }
+                formatted_trades.append(ft)
+            trade_data = {
+                "tiers": [
+                    {
+                        "total_exp_required": 0,
+                        "groups": [
+                            {
+                                "num_to_select": len(formatted_trades),
+                                "trades": formatted_trades
+                            }
+                        ],
+                        "trades": formatted_trades
+                    }
+                ]
+            }
+            with open(t_file, "w", encoding="utf-8") as tf:
+                json.dump(trade_data, tf, indent=2)
+
+            # Cria definicao de entidade customizada
+            ent_data = {
+                "format_version": "1.16.0",
+                "minecraft:entity": {
+                    "description": {
+                        "identifier": f"{safe_name}:npc_{clean_id}",
+                        "runtime_identifier": "minecraft:villager_v2",
+                        "is_spawnable": True,
+                        "is_summonable": True
+                    },
+                    "components": {
+                        "minecraft:nameable": {
+                            "always_show": True,
+                            "allow_name_tag_renaming": False
+                        },
+                        "minecraft:health": {"value": 100, "max": 100},
+                        "minecraft:damage_sensor": {"triggers": [{"cause": "all", "deals_damage": False}]},
+                        "minecraft:type_family": {"family": ["npc", "villager", "mob"]},
+                        "minecraft:collision_box": {"width": 0.6, "height": 1.9},
+                        "minecraft:movement": {"value": 0.0},
+                        "minecraft:navigation.walk": {"can_path_over_water": True},
+                        "minecraft:trade_table": {
+                            "display_name": n_val.capitalize(),
+                            "table": f"trading/{clean_id}_trades.json"
+                        },
+                        "minecraft:economy_trade_table": {
+                            "display_name": n_val.capitalize(),
+                            "table": f"trading/{clean_id}_trades.json",
+                            "convert_trades_economy": False
+                        },
+                        "minecraft:interact": {
+                            "interactions": [{
+                                "on_interact": {"filters": {"test": "is_family", "subject": "other", "value": "player"}},
+                                "open_trading": True
+                            }]
+                        }
+                    }
+                }
+            }
+            with open(os.path.join(entities_dir, f"npc_{clean_id}.json"), "w", encoding="utf-8") as ef:
+                json.dump(ent_data, ef, indent=2)
+            if clean_id != clean_stripped:
+                with open(os.path.join(entities_dir, f"npc_{clean_stripped}.json"), "w", encoding="utf-8") as ef:
+                    json.dump(ent_data, ef, indent=2)
 
                 # Segundo passo: traduzir todas as funções e salvar em ambos os caminhos (namespaced e root)
                 for fname, lines in func_files:
@@ -448,14 +487,15 @@ class BehaviorPackGenerator:
                             trans = CommandTranslator.translate(line_s, known_npcs, safe_name)
                             if "teleport_to_area_1" in fname:
                                 sector_fogs = {
-                                    "214 42 -2214": f"{safe_name}:fog_basalt_deltas",
-                                    "218 42 -2214": f"{safe_name}:fog_hell",
-                                    "216 42 -2206": f"{safe_name}:fog_warped_forest",
-                                    "218 42 -2206": f"{safe_name}:nether_fog",
+                                    "214 42 -2214": "minecraft:fog_basalt_deltas",
+                                    "218 42 -2214": "minecraft:fog_hell",
+                                    "216 42 -2206": "minecraft:fog_warped_forest",
+                                    "218 42 -2206": "minecraft:fog_crimson_forest",
                                 }
                                 for coord, v_fog in sector_fogs.items():
                                     if coord in line_s:
-                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog")
+                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog_vanilla")
+                                        converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {safe_name}:nether_fog nether_fog")
                                         converted_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add in_nether_sector")
                                         break
                             if "generates_npc" in fname:
@@ -821,6 +861,18 @@ class BehaviorPackGenerator:
             "# Setor 17: (378, 54, -1984)",
             'execute as @a[m=!creative] at @s if entity @s[x=378,y=64,z=-1984,r=50] unless entity @e[name=Reaper,x=378,y=64,z=-1984,r=40] run summon wither_skeleton "Reaper" 377.5 64 -1984',
             'execute as @a[m=!creative] at @s if entity @s[x=378,y=64,z=-1984,r=50] unless entity @e[name=Reaper,x=378,y=64,z=-1984,r=40] run playsound mob.wither.spawn @a 377.5 64 -1984 1.0 1.0',
+            "",
+            "# Masmorra Prometheus: Arena em (12, 69, -1611)",
+            "scoreboard objectives add prometheus_done dummy",
+            'execute as @a[m=!creative] at @s if entity @s[x=12,y=69,z=-1611,r=30] unless entity @e[name=Prometheus,x=12,y=69,z=-1611,r=50] if score #world prometheus_done matches 0 run summon wither_skeleton "Prometheus" 12 69 -1611',
+            'execute as @a[m=!creative] at @s if entity @s[x=12,y=69,z=-1611,r=30] unless entity @e[name=Prometheus,x=12,y=69,z=-1611,r=50] if score #world prometheus_done matches 0 run playsound mob.wither.spawn @a 12 69 -1611 1.0 1.0',
+            "execute as @a[m=!creative] at @s if entity @s[x=12,y=69,z=-1611,r=30] if score #world prometheus_done matches 0 run scoreboard players set #world prometheus_done 1",
+            "",
+            "# Torre Ascended Pillager: Arena em (1009, 185, 1168)",
+            "scoreboard objectives add pillager_done dummy",
+            'execute as @a[m=!creative] at @s if entity @s[x=1009,y=185,z=1168,r=30] unless entity @e[name="Ascended Pillager",x=1009,y=185,z=1168,r=50] if score #world pillager_done matches 0 run summon evoker "Ascended Pillager" 1009 185 1168',
+            'execute as @a[m=!creative] at @s if entity @s[x=1009,y=185,z=1168,r=30] unless entity @e[name="Ascended Pillager",x=1009,y=185,z=1168,r=50] if score #world pillager_done matches 0 run playsound mob.wither.spawn @a 1009 185 1168 1.0 1.0',
+            'execute as @a[m=!creative] at @s if entity @s[x=1009,y=185,z=1168,r=30] if score #world pillager_done matches 0 run scoreboard players set #world pillager_done 1'
         ]
         maze_boss_content = "\n".join(maze_boss_lines) + "\n"
         for d in (world_func_dir, func_dir, custom_func_dir):
@@ -949,10 +1001,24 @@ class BehaviorPackGenerator:
             "execute as @e[name=Reaper,tag=!equipped] run replaceitem entity @s slot.weapon.mainhand 0 iron_hoe 1 0",
             "execute as @e[name=Reaper,tag=!equipped] run replaceitem entity @s slot.armor.chest 0 iron_chestplate 1 0",
             "execute as @e[name=Reaper,tag=!equipped] run tag @s add equipped",
+            "execute as @e[name=Prometheus,tag=!Curse] run tag @s add Curse",
+            "execute as @e[name=Prometheus] run effect @s speed 2 1 true",
             "execute as @e[name=Prometheus] run effect @s resistance 2 2 true",
             "execute as @e[name=Prometheus] run effect @s strength 2 1 true",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.weapon.mainhand 0 diamond_hoe 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.armor.chest 0 diamond_chestplate 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.armor.legs 0 diamond_leggings 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.armor.feet 0 leather_boots 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run tag @s add equipped",
+            'execute as @e[name="Ascended Pillager",tag=!evok] run tag @s add evok',
             'execute as @e[name="Ascended Pillager"] run effect @s resistance 2 2 true',
             'execute as @e[name="Ascended Pillager"] run effect @s strength 2 1 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run effect @s fire_resistance 10 50 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run effect @s slow_falling 60 50 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run effect @s levitation 6 0 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run tag @s add boosted',
+            "execute as @e[type=vex,x=40,y=40,z=-1750,dx=30,dy=25,dz=150,tag=!equipped] run replaceitem entity @s slot.weapon.mainhand 0 golden_sword 1 0",
+            "execute as @e[type=vex,x=40,y=40,z=-1750,dx=30,dy=25,dz=150,tag=!equipped] run tag @s add equipped",
             f"# Invocador periódico de encontros de boss do labirinto (a cada 60 ticks / 3s)",
             f"scoreboard objectives add reaper_clock dummy",
             f"scoreboard players add #world reaper_clock 1",

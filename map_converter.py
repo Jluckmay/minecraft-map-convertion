@@ -879,6 +879,8 @@ class BedrockLevelDBManager:
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
                                         elif safe_name and coord in ((377, 6, -2117), (273, 1, -2200)):
                                             new_cmd = "scoreboard players set DAY_COUNTER dayCounter 1"
+                                        elif coord == (319, 1, -2160):
+                                            new_cmd = "# [Bedrock] effect night_vision suprimido no Nether para preservar a nevoa"
                                         else:
                                             new_cmd = convert_func(cmd)
                                         if new_cmd != cmd:
@@ -1349,14 +1351,15 @@ class MapConverterApp:
                     for l in raw_lines:
                         if "teleport_to_area_1" in fn:
                             sector_fogs = {
-                                "214 42 -2214": f"{self.safe_name}:fog_basalt_deltas",
-                                "218 42 -2214": f"{self.safe_name}:fog_hell",
-                                "216 42 -2206": f"{self.safe_name}:fog_warped_forest",
-                                "218 42 -2206": f"{self.safe_name}:nether_fog",
+                                "214 42 -2214": "minecraft:fog_basalt_deltas",
+                                "218 42 -2214": "minecraft:fog_hell",
+                                "216 42 -2206": "minecraft:fog_warped_forest",
+                                "218 42 -2206": "minecraft:fog_crimson_forest",
                             }
                             for coord, v_fog in sector_fogs.items():
                                 if coord in l:
-                                    conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog")
+                                    conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {v_fog} nether_fog_vanilla")
+                                    conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run fog @s push {self.safe_name}:nether_fog nether_fog")
                                     conv_lines.append(f"execute if block {coord} minecraft:redstone_block as @a[x=223,y=45,z=-2215,dx=3,dy=3,dz=12] run tag @s add in_nether_sector")
                                     break
                         conv_lines.append(DatapackConverter.convert_command(l, self.known_npcs, self.safe_name))
@@ -1384,7 +1387,7 @@ class MapConverterApp:
             # Definições de névoa customizada do Nether para The End (fogs/ e biomas do cliente)
             fogs_dir = os.path.join(self.rp_dir, "fogs")
             os.makedirs(fogs_dir, exist_ok=True)
-            def make_fog_def(identifier: str, start: float = 6.0, end: float = 42.0, color: str = "#9e1818"):
+            def make_fog_def(identifier: str):
                 return {
                     "format_version": "1.16.100",
                     "minecraft:fog_settings": {
@@ -1393,16 +1396,16 @@ class MapConverterApp:
                         },
                         "distance": {
                             "air": {
-                                "fog_start": start,
-                                "fog_end": end,
-                                "fog_color": color,
-                                "render_distance_type": "fixed"
+                                "fog_start": 0.0,
+                                "fog_end": 0.35,
+                                "fog_color": "#701414",
+                                "render_distance_type": "render"
                             },
                             "weather": {
-                                "fog_start": start,
-                                "fog_end": end,
-                                "fog_color": color,
-                                "render_distance_type": "fixed"
+                                "fog_start": 0.0,
+                                "fog_end": 0.35,
+                                "fog_color": "#701414",
+                                "render_distance_type": "render"
                             }
                         },
                         "volumetric": {
@@ -1422,20 +1425,20 @@ class MapConverterApp:
                     }
                 }
 
-            fog_configs = {
-                "nether_fog.json": (f"{self.safe_name}:nether_fog", 6.0, 42.0, "#9e1818"),
-                "nether_fog_simple.json": ("nether_fog", 6.0, 42.0, "#9e1818"),
-                "nether_fog_custom.json": ("custom:nether_fog", 6.0, 42.0, "#9e1818"),
-                "fog_the_end.json": ("minecraft:fog_the_end", 6.0, 44.0, "#8c1414"),
-                "fog_hell.json": (f"{self.safe_name}:fog_hell", 6.0, 42.0, "#8c1414"),
-                "fog_basalt_deltas.json": (f"{self.safe_name}:fog_basalt_deltas", 2.0, 28.0, "#685959"),
-                "fog_crimson_forest.json": (f"{self.safe_name}:fog_crimson_forest", 6.0, 42.0, "#9e1818"),
-                "fog_warped_forest.json": (f"{self.safe_name}:fog_warped_forest", 8.0, 46.0, "#163b40"),
-                "fog_soulsand_valley.json": (f"{self.safe_name}:fog_soulsand_valley", 4.0, 32.0, "#1b2632"),
+            fog_files = {
+                "nether_fog.json": f"{self.safe_name}:nether_fog",
+                "nether_fog_simple.json": "nether_fog",
+                "nether_fog_custom.json": "custom:nether_fog",
+                "fog_the_end.json": "minecraft:fog_the_end",
+                "fog_hell.json": "minecraft:fog_hell",
+                "fog_basalt_deltas.json": "minecraft:fog_basalt_deltas",
+                "fog_crimson_forest.json": "minecraft:fog_crimson_forest",
+                "fog_warped_forest.json": "minecraft:fog_warped_forest",
+                "fog_soulsand_valley.json": "minecraft:fog_soulsand_valley",
             }
-            for fname, (ident, start, end, color) in fog_configs.items():
+            for fname, ident in fog_files.items():
                 with open(os.path.join(fogs_dir, fname), "w", encoding="utf-8") as f:
-                    json.dump(make_fog_def(ident, start, end, color), f, indent=2)
+                    json.dump(make_fog_def(ident), f, indent=2)
 
             biomes_dir = os.path.join(self.rp_dir, "biomes")
             os.makedirs(biomes_dir, exist_ok=True)
@@ -1454,9 +1457,6 @@ class MapConverterApp:
                             "identifier": b_name
                         },
                         "components": {
-                            "minecraft:sky_color": {
-                                "sky_color": "#380808"
-                            },
                             "minecraft:fog_appearance": {
                                 "fog_identifier": f"{self.safe_name}:nether_fog"
                             }
@@ -1473,9 +1473,6 @@ class MapConverterApp:
                             "identifier": f"minecraft:{b_name}"
                         },
                         "components": {
-                            "minecraft:sky_color": {
-                                "sky_color": "#380808"
-                            },
                             "minecraft:fog_appearance": {
                                 "fog_identifier": f"{self.safe_name}:nether_fog"
                             }
@@ -1487,12 +1484,12 @@ class MapConverterApp:
 
                 biomes_dict[b_name] = {
                     "fog_identifier": f"{self.safe_name}:nether_fog",
-                    "water_surface_color": "#8c1414",
+                    "water_surface_color": "#701414",
                     "inherit_from_prior_fog": False
                 }
                 biomes_dict[f"minecraft:{b_name}"] = {
                     "fog_identifier": f"{self.safe_name}:nether_fog",
-                    "water_surface_color": "#8c1414",
+                    "water_surface_color": "#701414",
                     "inherit_from_prior_fog": False
                 }
 
@@ -1995,14 +1992,37 @@ class MapConverterApp:
             "execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog",
             "execute in overworld run fog @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove nether_fog_vanilla",
             "execute in overworld run tag @a[x=210,y=35,z=-2230,dx=30,dy=25,dz=30] remove in_nether_sector",
-            f"# Manutencao de atributos e efeitos de combate para chefes (Reaper, Prometheus, Ascended Pillager)",
+            f"# Manutencao de atributos, equipamentos e efeitos de combate para chefes (Reaper, Prometheus, Ascended Pillager)",
             "execute as @e[name=Reaper] run effect @s speed 2 1 true",
             "execute as @e[name=Reaper] run effect @s resistance 2 2 true",
             "execute as @e[name=Reaper] run effect @s strength 2 1 true",
+            "execute as @e[name=Reaper,tag=!equipped] run replaceitem entity @s slot.weapon.mainhand 0 iron_hoe 1 0",
+            "execute as @e[name=Reaper,tag=!equipped] run replaceitem entity @s slot.armor.chest 0 iron_chestplate 1 0",
+            "execute as @e[name=Reaper,tag=!equipped] run tag @s add equipped",
+            "execute as @e[name=Prometheus,tag=!Curse] run tag @s add Curse",
+            "execute as @e[name=Prometheus] run effect @s speed 2 1 true",
             "execute as @e[name=Prometheus] run effect @s resistance 2 2 true",
             "execute as @e[name=Prometheus] run effect @s strength 2 1 true",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.weapon.mainhand 0 diamond_hoe 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.armor.chest 0 diamond_chestplate 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.armor.legs 0 diamond_leggings 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run replaceitem entity @s slot.armor.feet 0 leather_boots 1 0",
+            "execute as @e[name=Prometheus,tag=!equipped] run tag @s add equipped",
+            'execute as @e[name="Ascended Pillager",tag=!evok] run tag @s add evok',
             'execute as @e[name="Ascended Pillager"] run effect @s resistance 2 2 true',
             'execute as @e[name="Ascended Pillager"] run effect @s strength 2 1 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run effect @s fire_resistance 10 50 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run effect @s slow_falling 60 50 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run effect @s levitation 6 0 true',
+            'execute as @e[name="Ascended Pillager",tag=!boosted] run tag @s add boosted',
+            "execute as @e[type=vex,x=40,y=40,z=-1750,dx=30,dy=25,dz=150,tag=!equipped] run replaceitem entity @s slot.weapon.mainhand 0 golden_sword 1 0",
+            "execute as @e[type=vex,x=40,y=40,z=-1750,dx=30,dy=25,dz=150,tag=!equipped] run tag @s add equipped",
+            f"# Invocador periódico de encontros de boss do labirinto (a cada 60 ticks / 3s)",
+            f"scoreboard objectives add reaper_clock dummy",
+            f"scoreboard players add #world reaper_clock 1",
+            f"execute if score #world reaper_clock matches 60.. run function {self.safe_name}/maze_boss",
+            f"execute if score #world reaper_clock matches 60.. run function maze_boss",
+            f"execute if score #world reaper_clock matches 60.. run scoreboard players set #world reaper_clock 0",
             f"# 5. Manutencao dos detectores de ciclo dia/noite",
             "execute if score #world world_init matches 1 unless block 286 100 -2168 daylight_detector run setblock 286 100 -2168 daylight_detector",
             "execute if score #world world_init matches 1 unless block 287 100 -2168 daylight_detector_inverted run setblock 287 100 -2168 daylight_detector_inverted",

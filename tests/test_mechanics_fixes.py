@@ -476,7 +476,7 @@ class TestMechanicsFixes(unittest.TestCase):
 
 
     def test_nether_fog_resource_pack_definitions(self):
-        """Testa se o gerador de Resource Pack gera as definições de névoa e os arquivos de bioma do cliente com distâncias fixas e sky_color."""
+        """Testa se o gerador de Resource Pack gera as definições de névoa e os arquivos de bioma do cliente."""
         tmp_dir = tempfile.mkdtemp()
         try:
             rp_dest = os.path.join(tmp_dir, "rp")
@@ -491,31 +491,22 @@ class TestMechanicsFixes(unittest.TestCase):
                 f_data = json.load(f)
             self.assertEqual(f_data["minecraft:fog_settings"]["description"]["identifier"], "mazescapist:nether_fog")
             air_dist = f_data["minecraft:fog_settings"]["distance"]["air"]
-            self.assertEqual(air_dist["fog_color"], "#9e1818")
-            self.assertEqual(air_dist["render_distance_type"], "fixed")
-            self.assertEqual(air_dist["fog_start"], 6.0)
-            self.assertEqual(air_dist["fog_end"], 42.0)
+            self.assertEqual(air_dist["fog_color"], "#701414")
+            self.assertEqual(air_dist["render_distance_type"], "render")
+            self.assertEqual(air_dist["fog_start"], 0.0)
+            self.assertEqual(air_dist["fog_end"], 0.35)
 
-            # 2. Verifica fogs temáticos dos setores
-            basalt_file = os.path.join(rp_dest, "fogs", "fog_basalt_deltas.json")
-            self.assertTrue(os.path.exists(basalt_file))
-            with open(basalt_file, "r", encoding="utf-8") as f:
-                b_data = json.load(f)
-            self.assertEqual(b_data["minecraft:fog_settings"]["distance"]["air"]["fog_color"], "#685959")
-            self.assertEqual(b_data["minecraft:fog_settings"]["distance"]["air"]["fog_start"], 2.0)
-            self.assertEqual(b_data["minecraft:fog_settings"]["distance"]["air"]["fog_end"], 28.0)
-
+            # 2. Verifica aliases
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_simple.json")))
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "nether_fog_custom.json")))
             self.assertTrue(os.path.exists(os.path.join(rp_dest, "fogs", "fog_hell.json")))
 
-            # 3. Verifica arquivos de bioma com sky_color e fog_appearance
+            # 3. Verifica arquivos de bioma
             cb_file = os.path.join(rp_dest, "biomes", "the_end.client_biome.json")
             self.assertTrue(os.path.exists(cb_file), "biomes/the_end.client_biome.json não foi gerado!")
             with open(cb_file, "r", encoding="utf-8") as f:
                 cb_data = json.load(f)
             self.assertEqual(cb_data["minecraft:client_biome"]["components"]["minecraft:fog_appearance"]["fog_identifier"], "mazescapist:nether_fog")
-            self.assertEqual(cb_data["minecraft:client_biome"]["components"]["minecraft:sky_color"]["sky_color"], "#380808")
 
             cb_highlands = os.path.join(rp_dest, "biomes", "end_highlands.client_biome.json")
             self.assertTrue(os.path.exists(cb_highlands), "biomes/end_highlands.client_biome.json não foi gerado!")
@@ -552,11 +543,12 @@ class TestMechanicsFixes(unittest.TestCase):
             with open(out_func, "r", encoding="utf-8") as f:
                 lines = [l.strip() for l in f.readlines() if l.strip()]
 
-            # Deve haver 3 linhas: custom sector fog push, tag add, e in the_end run tp
-            self.assertEqual(len(lines), 3)
-            self.assertIn("fog @s push mazescapist:fog_basalt_deltas nether_fog", lines[0])
-            self.assertIn("tag @s add in_nether_sector", lines[1])
-            self.assertIn("in the_end run tp @s -37 138 -202", lines[2])
+            # Deve haver 4 linhas: vanilla fog push, custom fog push, tag add, e in the_end run tp
+            self.assertEqual(len(lines), 4)
+            self.assertIn("fog @s push minecraft:fog_basalt_deltas nether_fog_vanilla", lines[0])
+            self.assertIn("fog @s push mazescapist:nether_fog nether_fog", lines[1])
+            self.assertIn("tag @s add in_nether_sector", lines[2])
+            self.assertIn("in the_end run tp @s -37 138 -202", lines[3])
 
             # Verifica se return_from_nether.mcfunction foi gerada
             ret_func = os.path.join(bp_dest, "functions", "mazescapist", "return_from_nether.mcfunction")
@@ -631,12 +623,11 @@ class TestMechanicsFixes(unittest.TestCase):
         self.assertIn("Spawner preservado", t_spawner)
 
     def test_night_vision_suppression_in_nether(self):
-        """Testa se night_vision no Nether é traduzido com sucesso para the_end iluminando os setores."""
+        """Testa se night_vision contínuo em setores do Nether é suprimido para não desativar a névoa no Bedrock."""
         cmd_nv = '/execute in the_nether run execute positioned as @a[x=-7,y=79,z=-670,dx=547,dy=140,dz=355] run effect give @p night_vision 11 0 true'
         t_nv = CommandTranslator.translate(cmd_nv)
-        self.assertIn("in the_end", t_nv)
-        self.assertIn("night_vision", t_nv)
-        self.assertNotIn("suprimido", t_nv)
+        self.assertTrue(t_nv.startswith("#"))
+        self.assertIn("suprimido", t_nv)
 
     def test_npc_joe_trade_item_mapping(self):
         """Testa se minecraft:bricks do Java é mapeado para minecraft:brick_block no Bedrock nas trocas do NPC Joe."""
